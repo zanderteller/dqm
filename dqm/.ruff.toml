@@ -1,0 +1,7 @@
+# allow lines to be as long as 120 characters
+line-length = 120
+
+# ignore rules:
+#   F403: unable to detect undefined names (universal imports using '*')
+#   E402: Module level import not at top of file
+ignore = ['F403', 'E402']

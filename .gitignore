@@ -1,0 +1,11 @@
+.vs/
+vs_tmp/
+*.pyc
+*.o
+*.dll
+*.so
+*.dylib
+*.user
+*.DS_Store
+*checkpoint.ipynb
+.ruff_cache/
