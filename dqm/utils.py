@@ -157,6 +157,12 @@ def extract_manifolds(mat, max_dist):
     if not mat.flags['C_CONTIGUOUS']:
         mat = np.copy(mat)
 
+    if dqm_lib is None:
+        print('## WARNING: compiled-library code for extract_manifolds not found -- calling Python code')
+        manifolds, manifold_sizes = extract_manifolds_python(mat, max_dist)
+        return manifolds, manifold_sizes
+    # end if don't have compiled-library code
+
     dqm_lib.ExtractManifoldsC(mat, num_rows, num_cols, max_dist, man_idxs)
 
     # extract manifolds from man_idxs (see ExtractManifoldsC for details)
@@ -209,7 +215,10 @@ def extract_manifolds_python(mat, max_dist):
     :param mat: a 2-D real-valued matrix
     :param max_dist: a row being within max_dist Euclidean distance of any other row in a manifold
         will make that row part of the manifold
-    :return: a list of lists of row numbers for the manifolds
+    :return: a tuple of:
+        * a list of lists of row numbers for the manifolds. the list of manifolds is sorted by manifold
+        size (number of rows), in descending order
+        * a parallel list of manifold sizes
     '''
 
     assert type(mat) is np.ndarray and mat.ndim == 2, "'mat' must be a 2-dimensional ndarray"
@@ -309,6 +318,7 @@ def nearest_neighbors(mat):
     '''
     return nearest-neighbor row number and distance for each row in mat
 
+    :param mat: a 2-D real-valued matrix
     :return: tuple of (nn_row_nums, nn_dists)
     '''
 
@@ -318,10 +328,45 @@ def nearest_neighbors(mat):
 
     nn_row_nums = np.zeros(num_rows, dtype=np.int32)
     nn_dists = np.zeros(num_rows, dtype=np.float64)
-    dqm_lib.NearestNeighborsC(mat, num_rows, num_cols, nn_row_nums, nn_dists)
+    if dqm_lib is not None:
+        dqm_lib.NearestNeighborsC(mat, num_rows, num_cols, nn_row_nums, nn_dists)
+    else:
+        print('## WARNING: compiled-library code for nearest_neighbors not found -- calling Python code')
+        nn_row_nums, nn_dists = nearest_neighbors_python(mat)
+    # end if /else have compiled-library code or not
 
     return nn_row_nums, nn_dists
 # end function nearest_neighbors
+
+
+def nearest_neighbors_python(mat):
+    '''
+    return nearest-neighbor row number and distance for each row in mat
+
+    this is the version of nearest_neighbors that does *not* call the compiled C++ code.
+    it will generally be much slower.
+
+    :param mat: a 2-D real-valued matrix
+    :return: tuple of (nn_row_nums, nn_dists)
+    '''
+
+    assert type(mat) is np.ndarray and mat.ndim == 2, "'mat' must be a 2-dimensional array"
+
+    num_rows, num_cols = mat.shape
+
+    nn_row_nums = np.zeros(num_rows, dtype=np.int64)
+    nn_dists = np.zeros(num_rows, dtype=np.float64)
+
+    for row_idx in range(num_rows):
+        distances = np.linalg.norm(mat - mat[row_idx, :], axis=1)
+        distances[row_idx] = np.max(distances)  # don't choose row as its own nearest neighbor
+        min_idx = np.argmin(distances)
+        nn_row_nums[row_idx] = min_idx
+        nn_dists[row_idx] = distances[min_idx]
+    # end for each row
+
+    return nn_row_nums, nn_dists
+# end function nearest_neighbors_python
 
 
 def plot_frames(frames, color='blue', size=5, skip_frames=1, fps=10, title='', labels=['X', 'Y', 'Z'],

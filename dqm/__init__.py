@@ -4,7 +4,7 @@ import ctypes
 import numpy as np
 
 
-def load_dqm_lib():
+def load_dqm_lib(lib_path):
     '''
     load compiled-code library and set up function signatures.
 
@@ -13,20 +13,7 @@ def load_dqm_lib():
     :return: the library (a ctypes.CDLL library object)
     '''
 
-    sys_name = platform.system()
-    if sys_name == 'Windows':
-        lib_ext = 'dll'
-    elif sys_name == 'Linux':
-        lib_ext = 'so'
-    elif sys_name == 'Darwin':  # Mac OS
-        lib_ext = 'dylib'
-    else:
-        raise RuntimeError(f"compiled code not implemented for platform '{sys_name}'")
-    # end if/else (which system platform we're on)
-
-    # we expect to find the compiled-library binary in the relative-path folder 'bin'
-    lib_name = 'dqm_python.{}'.format(lib_ext)
-    lib_path = os.path.join(os.path.dirname(__file__), 'bin', lib_name)
+    # create the library object
     dqm_lib = ctypes.CDLL(lib_path)
 
     # set up signature for: int MakeOperatorsC(double* mat, int num_rows, int num_cols, int nhambasis,
@@ -122,12 +109,33 @@ def load_dqm_lib():
 # end class method load_dqm_lib
 
 
-# load the library (will be imported by submodules)
-dqm_lib = load_dqm_lib()
+### find out if we have the compiled library file
+
+sys_name = platform.system()
+if sys_name == 'Windows':
+    lib_ext = 'dll'
+elif sys_name == 'Linux':
+    lib_ext = 'so'
+elif sys_name == 'Darwin':  # Mac OS
+    lib_ext = 'dylib'
+else:
+    raise RuntimeError(f"compiled code not implemented for platform '{sys_name}'")
+# end if/else (which system platform we're on)
+
+# we expect to find the compiled-library binary in the relative-path folder 'bin'
+lib_name = 'dqm_python.{}'.format(lib_ext)
+lib_path = os.path.join(os.path.dirname(__file__), 'bin', lib_name)
 
 
-# make everything in submodules importable from the package
-# note: these must come after initializing dqm_lib to avoid circular-import problems
+### load the library, if we have it (will be imported by modules)
+dqm_lib = None
+if os.path.exists(lib_path):
+    dqm_lib = load_dqm_lib(lib_path)
+# end if compile-library file exists
+
+
+### make everything in modules importable from the package
+# note: these must come after initializing dqm_lib, to avoid circular-import problems
 from .DQM import *
 from .utils import *
 

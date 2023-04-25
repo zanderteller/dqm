@@ -56,7 +56,12 @@ class DQM:
 
         # if false, call all-Python versions of the code (generally much slower but much easier to debug --
         # see dqm_pure_python.py)
-        self.call_c = True
+        if dqm_lib is None:
+            print("## WARNING: compiled-library code not found -- setting 'call_c' to false in DQM instance")
+            self.call_c = False
+        else:
+            self.call_c = True
+        # end if/else we have compiled-library code or not
 
         ## for PCA
         # note: if pca_transform is false, all other PCA settings are ignored
@@ -489,9 +494,12 @@ class DQM:
 
             exph = np.zeros((num_basis_rows, num_basis_rows), dtype=np.complex128)
 
-            num_basis_vecs = dqm_lib.MakeOperatorsC(mat, self.frames.shape[0], self.frames.shape[1],
-                                                    num_basis_rows, n_potential, self.sigma, self.step,
-                                                    self.mass, simt, xops, exph)
+            if dqm_lib is not None:
+                num_basis_vecs = dqm_lib.MakeOperatorsC(mat, self.frames.shape[0], self.frames.shape[1],
+                                                        num_basis_rows, n_potential, self.sigma, self.step,
+                                                        self.mass, simt, xops, exph)
+            else:
+                raise RuntimeError("compiled-library code not loaded by package")
 
             # reorder the dimensions to make xops <num_basis_rows x num_basis_rows x num_cols>
             # (note: we make the array contiguous here because it will be contiguous if we save it to disk and then
@@ -647,7 +655,12 @@ class DQM:
 
         if self.call_c:
             basis_row_nums = np.zeros(basis_size, dtype=np.int32)
-            dqm_lib.ChooseBasisByDistanceC(rows, num_rows, num_cols, basis_size, basis_row_nums, first_basis_row_num)
+            if dqm_lib is not None:
+                dqm_lib.ChooseBasisByDistanceC(rows, num_rows, num_cols, basis_size, basis_row_nums,
+                                               first_basis_row_num)
+            else:
+                raise RuntimeError("compiled-library code not loaded by package")
+            # end if/else have compiled-library instance or not
         else:
             basis_row_nums = choose_basis_by_distance_python(rows, basis_size, first_basis_row_num)
         # end if/else calling C or Python
@@ -709,8 +722,12 @@ class DQM:
         if num_batches == 1:
             if self.call_c:
                 overlaps = np.zeros(num_rows, dtype=np.float64)
-                dqm_lib.BuildOverlapsC(sigma, self.basis_rows, rows, num_basis_rows, num_rows, \
-                                            self.frames.shape[1], overlaps)
+                if dqm_lib is not None:
+                    dqm_lib.BuildOverlapsC(sigma, self.basis_rows, rows, num_basis_rows, num_rows,
+                                           self.frames.shape[1], overlaps)
+                else:
+                    raise RuntimeError("compiled-library code not loaded by package")
+                # end if/else have compiled-library instance or not
             else:
                 overlaps = build_overlaps_python(sigma, self.basis_rows, rows)
             # end if/else calling C or Python
@@ -1102,10 +1119,13 @@ class DQM:
             xops = np.ascontiguousarray(np.transpose(self.xops, (2, 0, 1)))
 
             num_basis_vecs = self.exph.shape[0]
-
-            dqm_lib.BuildFramesAutoC(new_frames, num_evolving_rows, num_cols, num_frames_to_build, current_frame,
-                                          self.basis_rows, self.basis_rows.shape[0], self.simt, num_basis_vecs,
-                                          xops, self.exph, self.sigma, self.stopping_threshold)
+            if dqm_lib is not None:
+                dqm_lib.BuildFramesAutoC(new_frames, num_evolving_rows, num_cols, num_frames_to_build, current_frame,
+                                         self.basis_rows, self.basis_rows.shape[0], self.simt, num_basis_vecs,
+                                         xops, self.exph, self.sigma, self.stopping_threshold)
+            else:
+                raise RuntimeError("compiled-library code not loaded by package")
+            # end if/else have compiled-library instance or not
 
             # make new_frames <num_evolving_rows x num_cols x num_frames_to_build>
             # (note: new_frames will now not be C_CONTIGUOUS, but everything else we're going to do with
