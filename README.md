@@ -1,2 +1,0 @@
-# dqm
-Dynamic Quantum Mapping

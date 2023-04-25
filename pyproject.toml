@@ -1,0 +1,11 @@
+[build-system]
+requires = ["setuptools"]
+
+[project]
+name = "dqm"
+authors = [{name = "Zander Teller", email = "zander@zanderteller.net"}]
+description = "Dynamic Quantum Mapping"
+version = "0.1.0"
+
+[tool.setuptools]
+packages = ["dqm"]
