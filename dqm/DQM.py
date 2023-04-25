@@ -61,12 +61,12 @@ class DQM:
         ## for PCA
         # note: if pca_transform is false, all other PCA settings are ignored
         self.pca_transform = True  # whether to do PCA rotation/projection of the data
-        # number of PCA dimensions to use in the rotated data matrix (set to positive value to override
+        # number of PCA dimensions to use in the rotated data matrix (if not None, takes precedence over
         # pca_var_threshold)
         self.pca_num_dims = None
-        # minimum proportion of cumulative variance to keep when choosing how many PCA dimensions to keep
-        # (ignored if pca_num_dims is positive)
-        self.pca_var_threshold = 1  # use 100% of variance (all dimensions)
+        # minimum proportion of cumulative variance when choosing how many PCA dimensions to keep (ignored if
+        # (pca_num_dims is not None)
+        self.pca_var_threshold = None
         # store column means of raw data (needed for out-of-sample operations)
         self.raw_col_means = None
         # vector of PCA eigenvalues (largest first)
@@ -88,7 +88,7 @@ class DQM:
         # random seed used to choose a random starting point for the basis (ignored if basis_start_with_outlier
         # is true)
         self.basis_rand_seed = 1
-        # whether to start with the single greatest outlier (will be very slow (O(n^2)) for large number of points)
+        # whether to start with the single greatest outlier (will be very slow, O(n^2), for large numbers of points)
         # if false, pick a random point to start with (using basis_rand_seed)
         self.basis_start_with_outlier = True
         # list of basis row numbers
@@ -102,26 +102,26 @@ class DQM:
         self.overlap_min_threshold = 0.5
         self.overlap_mean_threshold = 0.9
 
-        # main dqm parameters
+        ## main dqm parameters
         self.sigma = None  # no default
         self.step = 0.1
-        self.mass = None  # see default_mass_for_num_dims
+        self.mass = None  # no default (see default_mass_for_num_dims)
 
         # primarily useful for gauging scale for appropriate/useful values of sigma
         self.mean_row_distance = None
 
-        # dqm operators
+        ## dqm operators
         # transpose of similarity matrix
         self.simt = None
-        # 3-D array of position-expectation operator matrices (each slice in dim 3 is the operator matrix
+        # 3-D array of position-expectation operator matrices (each slice in 3rd dim is the operator matrix
         # for the corresponding dimension)
         self.xops = None
-        # Hamiltonian time-evolution exponentiation operator matrix
+        # Hamiltonian time-evolution exponentiation operator matrix (the 'evolution' operator)
         self.exph = None
 
         ## frames
         self.stopping_threshold = None
-        # note: frame 0 is also stored here, before any evolution has taken place
+        # note: frame 0 is stored here (as 3-D array with 1 slice in 3rd dim), before any evolution has taken place
         self.frames = None
     # end __init__ constructor
 
@@ -199,7 +199,6 @@ class DQM:
         :return: None
         '''
 
-        self.pca_num_dims = None
         self.raw_col_means = None
         self.pca_eigvals = None
         self.pca_eigvecs = None
@@ -255,35 +254,57 @@ class DQM:
     # end method plot_pca
 
 
-    def choose_num_pca_dims_by_variance(self):
+    def choose_num_pca_dims(self):
         '''
-        choose and store how many pca dimensions to use, based on PCA cumulative variance and instance parameters.
+        return a number of PCA dimensions to use when creating the rotated/truncated frame-0 matrix
 
-        :return: None
+        logic:
+        * if self.pca_num_dims and self.pca_var_threshold are both None, use all PCA dimensions
+        * otherwise use self.pca_num_dims is set to a positive value
+        * otherwise use self.pca_var_threshold
+
+        :return: number of PCA dimensions to use
         '''
 
-        assert self.pca_var_threshold and self.pca_var_threshold > 0 and self.pca_var_threshold <= 1,\
-            'pca_var_threshold must be in (0, 1] in order to choose number of PCA dimensions by variance'
+        assert self.pca_eigvals is not None, "'self.pca_eigvals' must not be None (must have run PCA already)"
+
+        if self.pca_num_dims is None and self.pca_var_threshold is None:
+            return self.pca_eigvals.size
+        # end if using all PCA dimensions
+
+        if self.pca_num_dims is not None:
+            assert self.pca_num_dims > 0 and round(self.pca_num_dims) == self.pca_num_dims,\
+                f"'self.pca_num_dims' must be a positive integer (currently set to {self.pca_num_dims})"
+            return self.pca_num_dims
+        # end if using pca_num_dims
+
+        ## otherwise, use pca_var_threshold
+
+        assert 0 < self.pca_var_threshold <= 1,\
+            f"'self.pca_var_threshold' must be in (0, 1] (currently set to {self.pca_var_threshold})"
 
         if self.pca_var_threshold == 1:
             # make this case explicit to avoid machine-precision corner cases
-            self.pca_num_dims = self.pca_cum_var.size
+            return self.pca_eigvals.size
         else:
             # find minimum number of dimensions that satisfies explained-variance threshold
             dim_idx = np.where(self.pca_cum_var >= self.pca_var_threshold)[0][0]
-            self.pca_num_dims = dim_idx + 1
+            return dim_idx + 1
         # end if/else pca_var_threshold is exactly 1 or not
-    # end method choose_num_pca_dims_by_variance
+    # end method choose_num_pca_dims
 
 
-    def create_frame_0(self, dat_raw=None):
+    def create_frame_0(self, dat_raw=None, num_pca_dims=None):
         '''
         create frame 0 from raw data.
 
-        if dat_raw is not None, we return the created frame 0.  otherwise, we use self.raw_data and
-        store the created frame 0 in self.frames.
+        if dat_raw is passed in (i.e., not None), we return the created frame 0.  otherwise, we use
+        self.raw_data and store the created frame 0 in self.frames.
 
         :param dat_raw: raw-data matrix.  if None, we use self.raw_data.  default None.
+        :param num_pca_dims: how many PCA dims to use (if self.pca_transform is True). inferred from
+            other instance variables (self.pca_num_dims nad self.pca_var_threshold -- see choose_num_pca_dims).
+            default None.
         :return: if 'dat_raw' was passed in, we return frame 0.  otherwise, we return None.
         '''
 
@@ -296,12 +317,16 @@ class DQM:
 
             if self.pca_transform:
                 if self.pca_eigvecs is None:
+                    if self.verbose:
+                        print('running PCA...')
                     self.run_pca()
-                if self.pca_num_dims is None:
-                    self.choose_num_pca_dims_by_variance()
+                # end if PCA not run/stored yet
 
-            # create frame 0 based on self.raw_data
-            self.frames = self.create_frame_0(self.raw_data)
+                num_pca_dims = self.choose_num_pca_dims()
+            # end if using PCA transformation
+
+            # create frame 0 based on self.raw_data and store in self.frames
+            self.frames = self.create_frame_0(self.raw_data, num_pca_dims)
 
             return
         # end if using self.raw_data
@@ -314,17 +339,18 @@ class DQM:
             dat = dat_raw - self.raw_col_means
 
             # rotate and truncate using the specified number of PCA dimensions
-            if self.pca_num_dims > self.pca_eigvecs.shape[1]:
-                print('##### WARNING: pca_num_dims set to {}, but only have {} -- using all {} PCA dimensions...'
-                      .format(self.pca_num_dims, self.pca_eigvecs.shape[1], self.pca_eigvecs.shape[1]))
-                eigvecs = self.pca_eigvecs
-                #dat = dat @ self.pca_eigvecs  # see note below
-            else:
-                eigvecs = self.pca_eigvecs[:, :self.pca_num_dims]
-                #dat = dat @ self.pca_eigvecs[:, :self.pca_num_dims]  # see note below
-            # NOTE: numpy matrix multiplication seems to be really slow (sometimes??) for no good reason. if we
+            if num_pca_dims > self.pca_eigvals.size:
+                if self.verbose:
+                    print('## WARNING: {} PCA dims requested, but only have {} -- using all {} PCA dimensions...'
+                          .format(num_pca_dims, self.pca_eigvals.size, self.pca_eigvals.size))
+                num_pca_dims = self.pca_eigvals.size
+            # end if too many PCA dims requested
+            eigvecs = self.pca_eigvecs[:, :num_pca_dims]
+            # NOTE: numpy matrix multiplication seems to be really slow (sometimes?) for no good reason. if we
             # build each column of the final matrix separately and then cat them together, the whole thing goes
-            # much faster
+            # much faster.
+            # 2FIX: IS THE PROBLEM THAT CHANGING DAT 'IN PLACE' IS CONFUSING THE NUMPY CALCULATIONS?
+            # dat = dat @ eigvecs  # this is (sometimes?) extremely slow
             new_dat = dat @ eigvecs[:, 0:1]  # 0:1 indexing is to keep the column vector 2-D
             for dim_idx in range(1, eigvecs.shape[1]):
                 new_dat = np.concatenate((new_dat, dat @ eigvecs[:, dim_idx:dim_idx + 1]), axis=1)
@@ -332,8 +358,9 @@ class DQM:
 
             if self.verbose:
                 print('using {} of {} PCA dimensions ({:.1f}% of total variance)'.\
-                      format(self.pca_num_dims, self.pca_eigvals.size, 100 * self.pca_cum_var[self.pca_num_dims - 1]))
+                      format(num_pca_dims, self.pca_eigvals.size, 100 * self.pca_cum_var[num_pca_dims - 1]))
         else:
+            # not doing PCA transformation -- just use raw data
             dat = dat_raw
         # end if/else doing PCA transformation or not
 
@@ -1241,7 +1268,7 @@ class DQM:
         for the give raw-data matrix:
         * center the columns, using self.raw_col_means (which must exist).
         * create a rotated and truncated matrix by applying the rotation/projection defined by the combination
-          of self.pca_eigvecs and self.pca_num_dims.
+          of self.pca_eigvecs and the number of PCA dimensions being used (inferred from self.frames).
         * calculate the proportional norms for each row -- meaning, the centered/rotated/truncated L2 norm divided
           by the centered-only L2 norm.  (if all PCA dimensions are being used, these proportions should all be 1,
           up to machine precision.)
@@ -1258,6 +1285,10 @@ class DQM:
         assert self.raw_col_means is not None, 'must have raw column means'
         assert self.raw_col_means.size == dat_raw.shape[1], "'dat_raw' must have correct number of columns"
 
+        assert self.frames and type(self.frames) is np.ndarray and self.frames.ndim == 3,\
+            "must have 'self.frames' to infer number of PCA dimensions being used"
+        num_pca_dims = self.frames.shape[1]
+
         t0 = time()
 
         dat = dat_raw - self.raw_col_means
@@ -1266,7 +1297,7 @@ class DQM:
         norms_orig = np.linalg.norm(dat, axis=1)
 
         # get rotated/truncated row norms
-        dat_rotated = dat @ self.pca_eigvecs[:, :self.pca_num_dims]
+        dat_rotated = dat @ self.pca_eigvecs[:, :num_pca_dims]
         norms_rotated = np.linalg.norm(dat_rotated, axis=1)
 
         norm_props = norms_rotated / norms_orig
@@ -1493,8 +1524,8 @@ class DQM:
             np.save(os.path.join(main_dir, 'frame_0.npy'), self.frames[:, :, :1])
         members = {
             'pca_transform': self.pca_transform,
-            'pca_var_threshold': self.pca_var_threshold,
             'pca_num_dims': self.pca_num_dims,
+            'pca_var_threshold': self.pca_var_threshold,
             'verbose': self.verbose,
             'min_report_time': self.min_report_time,
             'call_c': self.call_c,
@@ -1590,8 +1621,8 @@ class DQM:
             with open(pth, 'rb') as pickle_file:
                 members = pickle.load(pickle_file)
                 dqm.pca_transform = members['pca_transform']
-                dqm.pca_var_threshold = members['pca_var_threshold']
                 dqm.pca_num_dims = members['pca_num_dims']
+                dqm.pca_var_threshold = members['pca_var_threshold']
                 dqm.verbose = members['verbose']
                 dqm.min_report_time = members['min_report_time']
                 dqm.call_c =  members['call_c']
