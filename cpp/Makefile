@@ -28,13 +28,13 @@ all : bin dqm_python.$(DLL)
 
 dqm_python.$(DLL) : $(DLLOBJS)
 	$(CXX) -shared -fpic $(CXXFLAGS) -std=c++14 $(OPENMPLIB) -o $@ $(DLLOBJS)
-	mv $@ ../python/dqm/bin/
+	mv $@ ../dqm/bin/
 
 %.o : %.cpp
 	$(CXX) $(CXXFLAGS) -std=c++14 -c -fpic $(OPENMPFLAGS) -I$(INC) -o $@ $<
 
 bin :
-	mkdir -p ../python/dqm/bin
+	mkdir -p ../dqm/bin
 
 clean :
-	rm -rf *.o ../python/dqm/bin/*.$(DLL)
+	rm -rf *.o ../dqm/bin/*.$(DLL)
