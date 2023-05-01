@@ -1,5 +1,11 @@
 # Configuration file for the Sphinx documentation builder.
 
+
+# 2FIX: REMOVE (FOR LOCAL DOC BUILD ONLY)
+import os, sys
+sys.path.insert(0, '.')
+
+
 # -- Project information
 
 project = 'DQM'
@@ -17,6 +23,8 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
+    'sphinx.ext.autosectionlabel',
+    'sphinx_copybutton',
 ]
 
 intersphinx_mapping = {

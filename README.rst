@@ -1,31 +1,43 @@
-# dqm
-Dynamic Quantum Mapping
+Dynamic Quantum Mapping (DQM)
+=============================
 
+Dynamic Quantum Mapping (DQM) is a unique, open-source system designed for exploring and understanding the intrinsic structure of high-dimensional numerical data.
 
-READTHEDOCS TEMPLATE CONTENT:
+DQM works on any given data set, using the mathematical framework of quantum mechanics, by creating a high-dimensional data-density map and then moving data points toward nearby regions of higher data density.
 
-Template for the Read the Docs tutorial
-=======================================
+No assumptions are made about the underlying structure of the data.
 
-This GitHub template includes fictional Python library
-with some basic Sphinx docs.
+Visual and numerical analysis of the resulting animated ‘evolution’ of the data can reveal both clusters and extended structures, leading to a rich understanding of relationships between different subsets of the data.
 
-Read the tutorial here:
+Documentation (on Read the Docs)
+--------------------------------
 
-https://docs.readthedocs.io/en/stable/tutorial/
+* `Installation <https://dqm.readthedocs.io/en/latest/installation.html>`_
+* `Quick Start <https://dqm.readthedocs.io/en/latest/quick_start.html>`_
+* `User Guide <https://dqm.readthedocs.io/en/latest/user_guide.html>`_
+* `API <https://dqm.readthedocs.io/en/latest/api.html>`_
+* `Links <https://dqm.readthedocs.io/en/latest/links.html>`_
 
+Getting Involved
+----------------
 
-####################### FROM TEMPLATE:
+* Review the `contributing guidelines <./CONTRIBUTING.md>`_
+* Open or review a `pull request <./pulls>`_ (for contributions and changes to the project)
+* Open or discuss an `issue <./issues>`_ (bug reports and feature requests)
+* Participate in a `discussion <./discussions>`_ (anything other than issues)
 
+Credits
+-------
 
-Template for the Read the Docs tutorial
-=======================================
+* Marvin Weinstein
+* David Horn
+* Bernard Chen
+* Zander Teller
 
-This GitHub template includes fictional Python library
-with some basic Sphinx docs.
+DQM uses the `Eigen <https://eigen.tuxfamily.org>`_ library for linear-algebra subroutines.
 
-Read the tutorial here:
+License
+-------
 
-https://docs.readthedocs.io/en/stable/tutorial/
-
+`MIT License <./LICENSE.txt>`_
 
