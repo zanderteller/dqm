@@ -4,7 +4,6 @@ else
 CXXFLAGS:=-O2 -flto -DNDEBUG
 endif
 
-
 OS:=$(shell uname -s)
 
 ifeq ($(OS),Darwin)
@@ -20,7 +19,7 @@ OPENMPFLAGS:=-Xpreprocessor -fopenmp
 OPENMPLIB:=-fopenmp
 endif
 
-INC:=include  # relative include path (for Eigen library, etc.)
+INC:=include  # relative include path (for Eigen library)
 
 DLLOBJS:= utils.o array3d.o basis.o trajectories.o operators.o dqm_python.o
 

@@ -20,20 +20,102 @@ except ModuleNotFoundError:
 
 class DQM:
     '''
-    General Notes
+    This is the main class for using DQM (Dynamic Quantum Mapping).
 
-    the code has a reasonable number of error checks, but it's a complicated system.  the onus is currently on
-    the user to make sure that the choice of parameter settings makes sense and that a given instance doesn't
-    wind up in an inconsistent state.
+    The code has a reasonable number of error checks, but it's a complicated system.  The onus is currently on
+    the user to make sure that the choice of parameter settings makes sense and that a given instance of the
+    class doesn't wind up in an inconsistent state.
 
-    numpy 'C-CONTIGUOUS' arrays are not actually row-major when they're 3-D -- it's dimension 3 that varies
+    Class variables:
+
+    :cvar min_report_time: Report class-level execution times that are this many seconds or longer. Default 10.
+
+    Instance variables (general):
+
+    :ivar verbose: Boolean: whether to report on various operations. Default True.
+    :ivar min_report_time: Report instance-level execution times that are this many seconds or longer. Default 10.
+    :ivar raw_data: The raw data (a 2-D matrix). Default None.
+    :ivar call_c: Boolean: whether to call compiled (C++) code. Default True if the module can find the compiled
+        library, otherwise default False (with a printed warning).
+
+    Instance variables (for PCA):
+
+    :ivar pca_transform: Boolean: whether to do PCA rotation/truncation of the raw data when creating frame 0.
+        Default True. (If False, all other PCA settings are ignored.)
+    :ivar pca_num_dims: Integer number of PCA dimensions to use. Takes precedence over pca_var_threshold if set.
+        Default None.
+    :ivar pca_var_threshold: Threshold used for choosing number of PCA dimensions to use, representing required
+        proportion of total cumulative variance (e.g., 0.9) in the PCA dimensions used. Ignored if pca_num_dims
+        is set. Default None.
+    :ivar raw_col_means: Stored column means of raw data. (Needed for PCA rotation/truncation of any new
+        'out-of-sample' points.) Default None.
+    :ivar pca_eigvals: Stored vector of PCA eigenvalues (in descending order). Default None.
+    :ivar pca_eigvecs: Stored matrix of PCA eigenvectors (columns correspond to entries in pca_eigvals).
+        Default None.
+    :ivar pca_cum_var: Stored vector of proportional cumulative variance for the first n PCA dimensions.
+        Default None.
+
+    Instance variables (for the basis):
+
+    :ivar basis_size: Integer number of points to use in the basis. (All rows will be used by default for the basis
+        if this value is not set.) Default None.
+    :ivar basis_num_chunks: Choose the basis by partitioning all rows into this number of 'chunks'. (Multiple chunks
+        offers a useful speedup when working with large numbers of rows.) Default 1.
+    :ivar basis_rand_seed: Random seed, used to choose a random starting row for the basis. Ignored if
+        basis_start_with_outlier is True. Default 1.
+    :ivar basis_start_with_outlier: Boolean: whether to use the single greatest outlier row as the starting
+        row for the basis. (Will be slow, O(n^2), for large numbers of points.) Default True.
+    :ivar basis_row_nums: Stored list of row numbers for rows in the basis. Default None.
+    :ivar non_basis_row_nums: Stored list of row numbers for rows not in the basis. Default None.
+    :ivar basis_rows: Stored matrix of basis rows (i.e., data for the basis rows, taken from frame 0).
+        Default None.
+
+    Instance variables (for choosing sigma -- see method 'choose_sigma_for_basis'):
+
+    :ivar overlap_min_threshold: Minimum overlap for non-basis rows. Default 0.5.
+    :ivar overlap_mean_threshold: Minimum mean overlap for non-basis rows. Default 0.9.
+    :ivar mean_row_distance: Stored estimated mean pairwise distance between rows in the data set. (See method
+        'estimate_mean_row_distance'). Default None.
+
+    Instance variables (main DQM parameters):
+
+    :ivar sigma: Width (standard deviation) of the multidimensional Gaussian placed around every data point.
+        Default None.
+    :ivar mass: Value of mass assigned to each data point during DQM evolution. Typically set manually by the
+        user less often than sigma (see method 'default_mass_for_num_dims'). Default None.
+    :ivar step: Time step used during DQM evolution. Typically set manually rarely or never by the user.
+        Default 0.1.
+
+    Instance variables (DQM operators):
+
+    :ivar  simt: Stored transpose of the 'similarity' matrix, used to converted state vectors from the 'raw'
+        basis to the orthonormal basis of eigenstates. Default None.
+    :ivar xops: Stored 3-D array of position-expectation operator matrices. (Each slice in 3rd dim is the
+        operator matrix for the corresponding column/dimension in 2nd dim in 'frames'.)
+    :ivar exph: Stored 'evolution' operator matrix. (This is the exponentiated time-evolution Hamiltonian
+        operator matrix.) Has complex values. Default None.
+
+    Instance variables (frames):
+
+    :ivar stopping_threshold: A given data point is considered to have 'stopped' when it
+        moves less than this distance from one frame to the next frame. Typically is automatically set to
+        mean_row_distance / 1e6, but can be set manually. Default None.
+    :ivar frames: Stored 3-D array of frames: <num rows x num dims x num frames>. First slice in 3rd dim
+        contains the original data (possibly PCA rotated/truncated), stored here even before evolution
+        has taken place. Default None.
+    '''
+
+    '''
+    Note on Passing Arrays to C Code
+    
+    Numpy 'C-CONTIGUOUS' arrays are not actually row-major when they're 3-D -- it's dimension 3 that varies
     most quickly, not dimension 2, in the underlying memory.  so, in order to give the C code the ordering
     that it expects when passing a 3-D array, we need to put the column dimension in dimension 3, like so:
     <num_slices x num_rows x num_cols>.  this way, dimension 2 (column) is varying most quickly, which is
     what the C code expects (this is what 'row-major order' means). so now, when allocated memory is treated
     as 1-dimensional by the C code, sequential writes fill up slice 1 first, row by row, then slice 2, etc.,
-     as desired. afterward, we permute the dimensions back again here in the Python code, to make the 3-D
-     array again the expected <num_rows x num_cols x num_slices>.
+    as desired. afterward, we permute the dimensions back again here in the Python code, to make the 3-D
+    array again the expected <num_rows x num_cols x num_slices>.
     '''
 
 
@@ -44,9 +126,10 @@ class DQM:
 
     def __init__(self):
         '''
-        constructor for the DQM class
+        Constructor for the DQM class
 
-        initialize all member variables (some have defaults, many default to None)
+        Initialize all member variables -- some have defaults, many default to None. Documentation of instance
+        variables is in the class docstring (above).
         '''
 
         self.verbose = True
@@ -85,9 +168,6 @@ class DQM:
         ## for choosing and storing basis
         # number of points to use in the basis
         self.basis_size = None
-        # 'distance' is the only method currently implemented ('overlap' is the other obvious choice, but
-        # would be much slower)
-        self.basis_method = "distance"
         # for speed, basis can be chosen in multiple 'chunks' (i.e., a partition of the rows/points)
         self.basis_num_chunks = 1
         # random seed used to choose a random starting point for the basis (ignored if basis_start_with_outlier
@@ -133,19 +213,21 @@ class DQM:
 
     def default_mass_for_num_dims(self, num_dims=None):
         '''
-        use a simple heuristic formula (derived from random-data experiments) to return a suggested
-        default value of mass for a given number of dimensions: mass = -1 + 2 * log10(num_dims)
+        Use a simple heuristic formula (derived from random-data experiments) to return a suggested
+        default value of mass for a given number of dimensions:
 
-        we set a minimum suggested mass of 1, which overrides the heuristic for small numbers of
+        mass = -1 + 2 * log10(num_dims).
+
+        We set a minimum suggested mass of 1, which overrides the heuristic for small numbers of
         dimensions (< 10), to avoid oscillation caused by a 'too transparent' landscape.
 
-        note: for any given data set, the effective dimensionality of the data cloud could be significantly
-            lower than the number of dimensions being used, which could affect the appropriateness of the
-            suggested value of mass.  we make no attempt to deal with that issue here.
+        Important note: for any given data set, the effective dimensionality of the data cloud might be
+        significantly lower than the number of dimensions being used, which could affect the appropriateness
+        of the suggested value of mass. We make no attempt to deal with that issue here.
 
-        :param num_dims: optional -- number of dimensions.  if None, we attempt to infer the number of dimensions
-            from self.frames.  default None.
-        :return: suggested default mass value for the given number of dimensions
+        :param num_dims: Number of dimensions.  if None, we attempt to infer the number of dimensions
+            from self.frames (by size of 2nd dim). Default None.
+        :return: Suggested default mass value for the given number of dimensions.
         '''
 
         assert num_dims is not None or self.frames is not None,\
@@ -163,7 +245,7 @@ class DQM:
 
     def run_pca(self):
         '''
-        run PCA on the raw data (which must exist in self.raw_data) and store results
+        Run PCA on self.raw_data (which must exist) and store results.
 
         :return: None
         '''
@@ -199,7 +281,7 @@ class DQM:
 
     def clear_pca(self):
         '''
-        clear/reset all PCA results
+        Clear all PCA results (self.raw_col_means, self.pca_eigvals, self.pca_eigvecs and self.pca_cum_var).
 
         :return: None
         '''
@@ -213,12 +295,15 @@ class DQM:
 
     def plot_pca(self, num_dims=None):
         '''
-        create 3 PCA plots:
+        Display 3 PCA plots:
+
           * normalized eigenvalues (all divided by first eigenvalue)
           * log10 of normalized eigenvalues
           * proportional cumulative variance (all divided by total variance)
 
-        :param num_dims: number of PCA dimensions to show in the plots.  default None (meaning show all dims).
+        Note: an assertion will fail if the Matplotlib PyPlot module is not loaded.
+
+        :param num_dims: Number of PCA dimensions to show in the plots. Default None (meaning show all PCA dims).
         :return: None
         '''
 
@@ -252,23 +337,23 @@ class DQM:
         plt.axes(ax3)
         plt.plot(self.pca_cum_var[:num_dims], '-bo')
         plt.xlabel('dimension number (zero-based)')
-        plt.ylabel('cumulative variance')
+        plt.ylabel('proportional cumulative variance')
         plt.title('PCA: Cumulative Variance')
 
         plt.show()
     # end method plot_pca
 
 
-    def choose_num_pca_dims(self):
+    def _choose_num_pca_dims(self):
         '''
-        return a number of PCA dimensions to use when creating the rotated/truncated frame-0 matrix
+        Return a number of PCA dimensions to use when creating the rotated/truncated frame-0 matrix.
 
-        logic:
-        * if self.pca_num_dims and self.pca_var_threshold are both None, use all PCA dimensions
-        * otherwise use self.pca_num_dims is set to a positive value
-        * otherwise use self.pca_var_threshold
+        Logic:
+        * If self.pca_num_dims and self.pca_var_threshold are both None, use all PCA dimensions.
+        * Otherwise use self.pca_num_dims if set to a positive value.
+        * Otherwise use self.pca_var_threshold.
 
-        :return: number of PCA dimensions to use
+        :return: Number of PCA dimensions to use
         '''
 
         assert self.pca_eigvals is not None, "'self.pca_eigvals' must not be None (must have run PCA already)"
@@ -296,20 +381,27 @@ class DQM:
             dim_idx = np.where(self.pca_cum_var >= self.pca_var_threshold)[0][0]
             return dim_idx + 1
         # end if/else pca_var_threshold is exactly 1 or not
-    # end method choose_num_pca_dims
+    # end method _choose_num_pca_dims
 
 
     def create_frame_0(self, dat_raw=None, num_pca_dims=None):
         '''
-        create frame 0 from raw data.
+        Create frame 0 from raw data.
 
-        if dat_raw is passed in (i.e., not None), we return the created frame 0.  otherwise, we use
-        self.raw_data and store the created frame 0 in self.frames.
+        If dat_raw is passed in, we return the created frame 0. Otherwise, we use self.raw_data and store the
+        created frame 0 in self.frames.
 
-        :param dat_raw: raw-data matrix.  if None, we use self.raw_data.  default None.
-        :param num_pca_dims: how many PCA dims to use (if self.pca_transform is True). inferred from
-            other instance variables (self.pca_num_dims nad self.pca_var_threshold -- see choose_num_pca_dims).
-            default None.
+        If self.pca_transform is True, frame 0 will be the PCA-rotated/truncated coordinates of each row.
+        Otherwise, frame 0 will simply be the raw data.
+
+        (If dat_raw is passed in and pca_transform is True, we apply the 'in-sample' PCA rotation/truncation
+        derived originally from self.raw_data. It's important that any new 'out-of-sample' points be transformed
+        using the in-sample PCA transformation -- for more detail, see the discussion of running new points in
+        the user guide.)
+
+        :param dat_raw: A raw-data matrix.  if None, we use self.raw_data.  default None.
+        :param num_pca_dims: Only used by internal code -- use self.pca_num_dims and self.pca_var_threshold instead.
+            Default None.
         :return: if 'dat_raw' was passed in, we return frame 0.  otherwise, we return None.
         '''
 
@@ -321,13 +413,17 @@ class DQM:
                 "must not already have multiple frames when creating frame 0 (use clear_frames to clear frames)"
 
             if self.pca_transform:
+                assert num_pca_dims is None, "'num_pca_dims' must not be passed in when building 'in-sample'" \
+                                             "version of frame 0 from self.raw_data (use self.pca_num_dims or" \
+                                             "self.pca_var_threshold)"
+
                 if self.pca_eigvecs is None:
                     if self.verbose:
                         print('running PCA...')
                     self.run_pca()
                 # end if PCA not run/stored yet
 
-                num_pca_dims = self.choose_num_pca_dims()
+                num_pca_dims = self._choose_num_pca_dims()
             # end if using PCA transformation
 
             # create frame 0 based on self.raw_data and store in self.frames
@@ -382,22 +478,26 @@ class DQM:
 
     def clear_basis(self):
         '''
-        clear instance variables storing information about the basis
+        Clear instance variables storing information about the basis, including self.basis_size.
+
+        Use this method to clear a basis when you want to return to the default behavior of using
+        all rows as the basis.
 
         :return: None
         '''
 
+        self.basis_size = None
         self.basis_row_nums = None
         self.non_basis_row_nums = None
         self.basis_rows = None
     # end method clear_basis
 
 
-    def set_basis(self, basis_row_nums=None):
+    def _set_basis(self, basis_row_nums=None):
         '''
-        set basis row nums and basis rows
+        Set basis row nums and basis rows
 
-        :param basis_row_nums: list of basis row nums.  if None, we use all rows as the basis.
+        :param basis_row_nums: List of basis row numbers. If None, we use all rows as the basis.
         :return: None
         '''
 
@@ -407,7 +507,7 @@ class DQM:
             basis_row_nums = list(range(self.frames.shape[0]))  # use all rows as the basis by default
 
         assert type(basis_row_nums) is list, 'basis_row_nums must be a list'
-        assert len(basis_row_nums) > 0, 'basis_row_nums must have at least 1 row (use clear_basis to clear the basis)'
+        assert len(basis_row_nums) > 0, 'basis_row_nums must have at least 1 row'
         assert min(basis_row_nums) >= 0 and max(basis_row_nums) < self.frames.shape[0] and \
                 len(basis_row_nums) <= self.frames.shape[0] and len(set(basis_row_nums)) == len(basis_row_nums), \
                 'basis_row_nums must have valid, unique row numbers'
@@ -416,29 +516,31 @@ class DQM:
         # find non-basis row numbers (using sets -- much faster than list comprehension for large number of rows)
         self.non_basis_row_nums = list(set(range(self.frames.shape[0])).difference(set(basis_row_nums)))
         self.basis_rows = np.copy(self.frames[basis_row_nums, :, 0])  # note: basis_rows is 2-D, not 3-D
-    # end method set_basis
+    # end method _set_basis
 
 
     def build_operators(self, n_potential=None):
         '''
-        build and store the dqm operators
-          * simt: transpose of 'similarity' matrix, which converts overlap vectors from 'raw' basis of basis rows
-            to orthonormal basis of eigenstates
-                - dimensions: <num_basis_vecs x num_basis_rows>
-          * xops: 3-D array, where slice i in 3rd dimension is the position-expectation operator matrix for data
-            dimension i
-                - dimensions: <num_basis_vecs x num_basis_vecs x num_cols>
-          * exph: complex matrix that is the Hamiltonian time-evolution exponentiation operator.
-                - dimensions: <num_basis_vecs x num_basis_vecs>
+        Build the DQM operators and store them in the instance.
 
-        NOTES:
-          * if basis has not been set, we use all rows as the basis by default.
-          * the relative order of the basis rows is baked into the operators, so the relative
-            ordering of the basis rows must not change later.
-          * num_basis_vecs (the number of orthogonal basis eigenstates) may be smaller than num_basis_rows.
+        If basis has not been set, we use all rows as the basis by default. (For large numbers of rows, this
+        default will be unusably slow.)
 
-        :param n_potential: use this number of rows to use to build the potential, starting from the first row.
-        if None, we use all rows.  (mainly for debugging and speed testing.)  default None.
+        Note: the relative order of the basis rows is baked into the operators, so the relative
+        ordering of the basis rows must not change later (when building frames).
+
+        The operators are:
+
+        * simt: Transpose of 'similarity' matrix, which converts state vectors from 'raw' basis of basis rows
+          to orthonormal basis of eigenstates. Dimensions: <num basis vectors x num basis rows>.
+        * xops: 3-D array, where slice i in 3rd dimension is the position-expectation operator matrix for data
+          dimension i (in 2nd dimension in frames). Dimensions: <num basis vectors x num basis vectors x num dims>.
+        * exph: Complex-valued 'evolution' operator matrix (the exponentiated time-evolution Hamiltonian operator
+          matrix). Dimensions: <num basis vectors x num basis vectors>.
+
+        :param n_potential: Used mainly for debugging and speed testing. Use this number of rows to use to build
+            the potential, starting from the first row. If None, we use all rows (not just the basis rows).
+            Default None.
         :return: None
         '''
 
@@ -460,7 +562,7 @@ class DQM:
         if self.basis_row_nums is None:
             if self.verbose:
                 print(f'basis was not set -- using full basis (all {self.frames.shape[0]} rows)')
-            self.set_basis()
+            self._set_basis()
 
         if n_potential is None:
             n_potential = self.frames.shape[0]  # use all rows to build the potential
@@ -535,26 +637,20 @@ class DQM:
 
     def choose_basis_by_distance(self):
         '''
-        choose a basis based on distance and store the results.
+        Choose and store a set of basis rows, based on Euclidean distance, and store the results.
 
-        we select basis rows from frame 0 in the following way:
-        * if self.basis_start_with_outlier is true, we use the largest outlier as the first basis row, where the
-          largest outlier is defined as the row whose nearest neighbor is farthest away.  otherwise, we choose a
-          row at random as the first basis row.
-        * for each subsequent basis row (until desired basis size is reached, as set by self.basis_size), we choose
-          the non-basis row whose closest distance to any current basis row is largest.
+        self.basis_size must be set to a positive number less than the number of rows in self.frames (which
+        must exist).
 
-        if self.basis_num_chunks is > 1, we divide the rows into equal-size chunks (i.e., batches) and perform the
-        above operation separately on each chunk of rows (with an appropriately smaller basis size, so that the
-        overall basis size comes out right).  in this case, we randomly shuffle the rows before dividing them into
-        chunks (to avoid any possible pattern or bias in the row ordering).  more chunks will give a less 'accurate'
-        overall basis (since 2 basis points from 2 different chunks may be arbitrarily close to each other), but
-        the selection process will run significantly faster, since each chunk is O(n^2).
+        First basis row: if self.basis_start_with_outlier is True, we use the largest outlier (with the farthest
+        nearest neighbor) as the first basis row. Otherwise, we choose a random row as the first basis row.
 
-        note: this function chooses basis rows by distance. the other main choice is to choose basis rows by
-        overlap, where each new basis row has the smallest overlap with the already chosen basis points.
-        The practical difference between the overlap approach and the one using distance should be subtle in
-        most cases, and using distance is much faster.
+        Subsequent basis rows: we choose the non-basis row whose closest distance to any current basis row is
+        largest, until the desired basis size is reached.
+
+        If self.basis_num_chunks is > 1, we partition all rows into 'chunks' and choose basis rows separately for
+        each chunk. (This is faster but less 'accurate', since 2 basis rows in 2 different chunks may be arbitrarily
+        close to each other.)
 
         :return: None
         '''
@@ -608,7 +704,7 @@ class DQM:
             chunk_basis_size = chunk_basis_sizes[chunk_idx]
             chunk_row_nums = list(range(start_idxs[chunk_idx], end_idxs[chunk_idx]))
             chunk_rows = frame0[chunk_row_nums, :]
-            chunk_basis_idxs = self.choose_basis_by_distance_single_chunk(chunk_rows, chunk_basis_size, rng)
+            chunk_basis_idxs = self._choose_basis_by_distance_single_chunk(chunk_rows, chunk_basis_size, rng)
             # convert back to original (possibly shuffled) row numbers
             chunk_basis_row_nums = [chunk_row_nums[i] for i in chunk_basis_idxs]
             basis_row_nums += chunk_basis_row_nums
@@ -626,20 +722,20 @@ class DQM:
             else:
                 print('chose {} basis rows in {} seconds'.format(basis_size, round(t1 - t0)))
 
-        self.set_basis(basis_row_nums)
+        self._set_basis(basis_row_nums)
     # end method choose_basis_by_distance
 
 
-    def choose_basis_by_distance_single_chunk(self, rows, basis_size, rng):
+    def _choose_basis_by_distance_single_chunk(self, rows, basis_size, rng):
         '''
-        choose basis_size number of rows from rows to act as a basis. (see comments for choose_basis_by_distance
-        for more details.)
+        Choose basis_size number of rows from rows to act as a basis.
 
-        :param rows: matrix of rows
-        :param basis_size: number of rows to select for the basis
-        :param rng: numpy random-number generator (passed from choose_basis_by_distance) -- must have
-            an 'integers' method (same as the older numpy 'randint' method).
-        :return: list of selected basis row numbers
+        See comments for choose_basis_by_distance for more details.
+
+        :param rows: Matrix of rows
+        :param basis_size: Number of rows to select for the basis
+        :param rng: Numpy random-number generator (passed from choose_basis_by_distance).
+        :return: List of selected basis row numbers
         '''
 
         num_rows, num_cols = rows.shape
@@ -666,24 +762,34 @@ class DQM:
         # end if/else calling C or Python
 
         return basis_row_nums.tolist()
-    # end method choose_basis_by_distance_single_chunk
+    # end method _choose_basis_by_distance_single_chunk
 
 
-    def build_overlaps(self, rows=None, row_nums=None, sigma=None, batch_size=int(100e3)):
+    def build_overlaps(self, rows=None, row_nums=None, sigma=None, batch_size=int(100e3), verbose=None):
         '''
-        build basis overlaps for a given set of rows.
+        Build basis overlaps for a given set of rows.
 
-        if 'rows' is passed in, we build overlaps for those rows.  otherwise, if row_nums is passed in,
-        we build overlaps for those rows.  otherwise, we build overlaps for all non-basis rows in frame 0.
+        If 'rows' is passed in, we build overlaps for those rows. Otherwise, if row_nums is passed in,
+        we build overlaps for those rows. Otherwise, we build overlaps for all non-basis rows.
 
-        :param rows: 2-D array of rows.  takes precedence if not None.  default None.
-        :param row_nums: list of row numbers, used if rows is None.  default None.
-        :param sigma: value of sigma.  if None, we use self.sigma.
-        :param batch_size: call C code to build overlaps in batches and compile the results.  default 100,000.
-        :return: vector of overlaps (basis-overlap is a scalar for each row)
+        Note: 'overlap' is a measure of how well a given data point is represented by the basis. Basis points
+        will all have an overlap of 1, meaning perfect representation. (For technical details, see the section
+        on "Reconstruction of Wave Functions in the Eigenbasis" in the technical-summary document "Understanding
+        DQM".)
+
+        :param rows: 2-D array of data rows. Takes precedence if not None.  Default None.
+        :param row_nums: List of row numbers, used if rows is None. Default None.
+        :param sigma: Value of sigma. If None, we use self.sigma. Default None.
+        :param batch_size: Number of rows in a batch. (For very large numbers of rows, memory management can
+            become an issue.) Default 100,000.
+        :param verbose: Boolean: if not None, overrides self.verbose. Default None.
+        :return: Vector containing scalar overlap value for each row.
         '''
 
         t0 = time()
+
+        if verbose is None:
+            verbose = self.verbose
 
         assert self.basis_row_nums is not None and self.basis_rows is not None, \
             'must have basis to build overlaps'
@@ -729,7 +835,7 @@ class DQM:
                     raise RuntimeError("compiled-library code not loaded by package")
                 # end if/else have compiled-library instance or not
             else:
-                overlaps = build_overlaps_python(sigma, self.basis_rows, rows)
+                overlaps = build_overlaps_python(sigma, self.basis_rows, rows, verbose=verbose)
             # end if/else calling C or Python
         else:
             overlaps = np.zeros(0)  # empty vector
@@ -737,70 +843,88 @@ class DQM:
                 start_idx = batch_size * batch_idx
                 end_idx = min(num_rows, batch_size * (batch_idx + 1))
                 batch_overlaps = self.build_overlaps(rows=rows[start_idx:end_idx, :], sigma=sigma,
-                                                     batch_size=batch_size)
+                                                     batch_size=batch_size, verbose=verbose)
                 overlaps = np.concatenate((overlaps, batch_overlaps))
             # end for each batch
         # end if/else multiple batches or not
 
         t1 = time()
-        if self.verbose and t1 - t0 >= self.min_report_time:
+        if verbose and t1 - t0 >= self.min_report_time:
             print("built {:,} overlaps in {} seconds".format(num_rows, round(t1 - t0)))
 
         return overlaps
     # end method build_overlaps
 
 
-    def estimate_mean_row_distance(self, rel_err_threshold=0.01, max_n=int(1e4), rand_seed=500):
+    def estimate_mean_row_distance(self, rel_err_threshold=0.01, rand_seed=500):
         '''
-        estimate the mean distance between rows in frame 0 (self.frames must exist as an ndarray).
+        Estimate the mean pairwise distance between rows in frame 0. (self.frames must exist.)
 
-        use a successively larger number of row pairs to estimate the overall mean distance, until the
-        'relative error' (standard error of the mean divided by the mean) drops below the given threshold.
+        Use a successively larger number of row pairs to estimate the overall mean distance, until the
+        'relative error' (standard error of the mean divided by the mean) drops below rel_err_threshold.
 
-        estimated mean distance between rows is stored in self.mean_row_distance
+        The final result is stored in self.mean_row_distance.
 
-        :param rel_err_threshold: threshold for 'relative error' (standard error of mean divided by mean).
-            default 0.01.
-        :param max_n: maximum number of distances to test (also limited to half the total number of rows
-            in frame 0). default 10,000.
-        :param rand_seed: random seed for choosing row pairs for distance calculations. default 500.
+        :param rel_err_threshold: Threshold for 'relative error' (standard error of mean divided by mean).
+            Must be positive. Default 0.01.
+        :param rand_seed: Random seed for choosing row pairs for distance calculations. Default 500.
         :return: None
         '''
 
         assert type(self.frames) is np.ndarray, 'frame 0 must exist to estimate mean distance between rows'
+        assert rel_err_threshold > 0, f"'rel_err_threshold must be positive', is currently {rel_err_threshold}"
 
         rows = self.frames[:, :, 0]
-
         num_rows = rows.shape[0]
-        row_nums = np.array(list(range(num_rows)))
 
         rng = np.random.default_rng(rand_seed)
-        max_n = min(max_n, floor(num_rows / 2))
-        n = min(100, max_n)
+        shuffled_row_nums = rng.permutation(num_rows)
+
+        # dists array will grow as needed (see below)
+        dists_array_size = num_rows
+        dists = np.zeros(dists_array_size)
 
         done = False
+        row_idx1 = 0
+        row_idx2 = 1
+        num_pairs = 0
         while not done:
-            row_pairs = rng.choice(row_nums, size=(n, 2), replace=False)
-            dists = np.array([np.linalg.norm(rows[i, :] - rows[j, :]) for (i, j) in row_pairs])
-            mu = np.mean(dists)
-            report_precision = floor(log10(mu)) - 2
+            # calculate store row-pair distance
+            num_pairs += 1
+            dists[num_pairs - 1] = np.linalg.norm(rows[shuffled_row_nums[row_idx1], :] -
+                                                  rows[shuffled_row_nums[row_idx2], :])
 
-            # 'relative error' is standard error of the mean divided by the mean
-            rel_err = np.std(dists) / n ** 0.5 / mu
+            # update row-pair indices
+            row_idx2 += 1
+            if row_idx2 == num_rows:
+                row_idx1 += 1
+                if row_idx1 == num_rows - 1:
+                    break  # we've run out of row pairs
+                else:
+                    row_idx2 = row_idx1 + 1
+            # end if reached the end of the shuffled list of rows for row_idx2
 
-            done = rel_err <= rel_err_threshold
+            # calculate current relative error
+            if num_pairs > 1:
+                mu = np.mean(dists[:num_pairs])
+                std = np.std(dists[:num_pairs])
+                rel_err = std / np.sqrt(num_pairs) / mu
+                done = rel_err <= rel_err_threshold
+            # end if have multiple row-pair distances for calculations
 
-            if not done:
-                n = round(n * 1.5)
-                if n > max_n:
-                    break
-                # end if n too big
-            # end if not done
-        # end while not done (relative error too big and still have more rows left)
+            if num_pairs == dists.size and not done:
+                # grow dists array as needed
+                dists_array_size += num_rows
+                new_dists = np.zeros(dists_array_size)
+                new_dists[:num_pairs] = dists
+                dists = new_dists
+            # end if growing dists array
+        # end while not done
 
         if self.verbose:
-            print('estimated mean distance between rows is {:.{}f} (relative error {:.1f}%)'.
-                  format(mu, max(0, -report_precision), 100 * rel_err))
+            report_precision = floor(log10(mu)) - 2
+            print('estimated mean distance between rows is {:.{}f} (relative error {:.1f}%, from {:,} row pairs)'.
+                  format(mu, max(0, -report_precision), 100 * rel_err, num_pairs))
 
         self.mean_row_distance = mu
 
@@ -810,28 +934,34 @@ class DQM:
 
     def choose_sigma_for_basis(self, batch_size=None, num_batches_to_test=10, rand_seed=11):
         '''
-        choose the smallest value of sigma that meets overlap-threshold requirements (self.overlap_min_threshold
+        Choose the smallest value of sigma that meets overlap-threshold requirements (self.overlap_min_threshold
         and self.overlap_mean_threshold) for non-basis rows.
 
-        self must already have frame 0 and a selected basis.
+        self must already have frame 0 and a selected basis that is smaller than the total number of rows (i.e.,
+        not a 'full' basis)
 
-        logic:
-        * using rand_seed, shuffle all non-basis rows into a random order
-        * if batch_size is None, pass all non-basis rows to choose_sigma_for_rows in a single batch
-        * if batch_size is not None, call choose_sigma_for_rows 1 batch at a time, continuing as long as
-          the returned value of sigma is the same for every batch.  when a mismatch occurs, increase the
-          batch size by 25% and start over.
-        * when num_batches_to_test batches all return the same value of sigma, we have our final selected value.
+        We set self.sigma to the final resulting value of sigma.
 
-        we set self.sigma to the final resulting value of sigma.
+        Default values for the arguments are good enough in most cases. (The 'batch' mode is for handling large
+        numbers of non-basis rows more efficiently.)
 
-        :param batch_size: number of rows in a single batch.  if None, pass all non-basis rows at once
-            to choose_sigma_for_rows.  default None.
-        :param num_batches_to_test: number of batches that must return the same value of sigma before
-            we're done (if batch_size is not None).  default 10.
-        :param rand_seed: random seed -- determines the random shuffled order of non-basis row numbers.
-            default 11.
+        :param batch_size: Number of rows in a single batch.  if None, test all non-basis rows at once.
+            Default None.
+        :param num_batches_to_test: Number of batches that must return the same value of sigma before
+            we're done (if batch_size is not None). Default 10.
+        :param rand_seed: random seed for shuffling the order of non-basis row numbers. Default 11.
         :return: None
+        '''
+
+        '''
+        Batch logic
+
+        * Using rand_seed, shuffle all non-basis rows into a random order.
+        * If batch_size is None, pass all non-basis rows to _choose_sigma_for_rows in a single batch.
+        * If batch_size is not None, call _choose_sigma_for_rows 1 batch at a time, continuing as long as
+          the returned value of sigma is the same for every batch. When a mismatch occurs, increase the
+          batch size by 25% and start over.
+        * When num_batches_to_test batches all return the same value of sigma, we have our final selected value.
         '''
 
         assert self.basis_rows.shape[0] < self.frames.shape[0],\
@@ -845,13 +975,9 @@ class DQM:
 
         if batch_size is None:
             # if no batch size given, test all non-basis rows at once
-            self.sigma = self.choose_sigma_for_rows(shuffled_row_nums)
+            self.sigma = self._choose_sigma_for_rows(shuffled_row_nums)
             return
         # end if no batch size (testing all non-basis rows at once)
-
-        # suppress output from subfunctions (things get a little too verbose otherwise...)
-        verbose = self.verbose
-        self.verbose = False
 
         done = False
         while not done:
@@ -861,7 +987,7 @@ class DQM:
             mismatch = False
             sigma = None
 
-            if verbose:
+            if self.verbose:
                 print('##### to choose sigma, testing {:,} batches (batch size {:,}) #####'.
                       format(num_batches_to_test, batch_size))
 
@@ -870,14 +996,14 @@ class DQM:
                 end_row_idx = min(num_rows, batch_size * (batch_idx + 1))
                 batch_row_nums = shuffled_row_nums[start_row_idx:end_row_idx]
 
-                batch_sigma = self.choose_sigma_for_rows(batch_row_nums)
-                if verbose:
+                batch_sigma = self._choose_sigma_for_rows(batch_row_nums, verbose=False)
+                if self.verbose:
                     print('batch {}: sigma is {}'.format(batch_idx, batch_sigma))
                 if sigma is None:
                     sigma = batch_sigma
                 else:
                     if sigma != batch_sigma:
-                        if verbose:
+                        if self.verbose:
                             print("sigma values don't agree -- increasing batch size...")
                         mismatch = True
                         batch_size *= 1.25
@@ -888,39 +1014,40 @@ class DQM:
             done = not mismatch
         # end while not done
 
-        # restore original verbosity setting
-        # 2FIX: if execution is interrupted, original setting will not be restored
-        self.verbose = verbose
-
         self.sigma = sigma
     # end method choose_sigma_for_basis
 
 
-    def choose_sigma_for_rows(self, row_nums, precision=None):
+    def _choose_sigma_for_rows(self, row_nums, verbose=None):
         '''
-        for the given row_nums, use a binary search to find the smallest value of sigma that meets
+        For the given row_nums, use a binary search to find the smallest value of sigma that meets
         overlap-threshold requirements (self.overlap_min_threshold and self.overlap_mean_threshold).
 
         self must already have frame 0 and a selected basis.
 
-        if not passed in, we determine precision of the search as follows:
-        * estimate mean distance between rows by calling self.estimate_mean_row_distance
-        * set precision at least 2 orders of magnitude below the mean distance:
-            precision = 10 ** (floor(log10(mean_distance)) - 2)
-          for example, if mean distance is 20, precision will be 0.1.
-        * precision determines the smallest allowed step from one value of sigma to the next.
+        We determine precision of the search as follows:
 
-        the first search value for sigma is 10 * precision.  if that first value of sigma is good, we divide
+        * Estimate mean distance between rows by calling self.estimate_mean_row_distance
+        * Set precision at least 2 orders of magnitude below the mean distance:
+          precision = 10 ** (floor(log10(mean_distance)) - 2).
+          For example, if mean distance is 20, precision will be 0.1.
+        * Precision determines the smallest allowed step from one value of sigma to the next.
+
+        The first search value for sigma is 10 * precision. If that first value of sigma is good, we divide
         sigma by 2 until we find a vad value. (if the largest bad value of sigma is below the current
-        precision level, we increase precision as needed.). if that first value of sigma is bad, we multiply
-        sigma by 2 until we find a good value.  then we proceed by binary search, until we have a bad value
+        precision level, we increase precision as needed.) If that first value of sigma is bad, we multiply
+        sigma by 2 until we find a good value. Then we proceed by binary search, until we have a bad value
         and a good value within one precision step of each other.  the larger, good, value is the final
         selected value of sigma.
 
-        :param row_nums: list/array of row numbers to use for testing overlaps (must not include any basis
+        :param row_nums: List/array of row numbers to use for testing overlaps (must not include any basis
             row numbers).
-        :return: float -- final value of sigma
+        :param verbose: Boolean: if not None, overrides self.verbose. Default None.
+        :return: Final value of sigma.
         '''
+
+        if verbose is None:
+            verbose = self.verbose
 
         # intersect row_nums and self.basis_row_nums, make sure they're disjoint
         basis_row_nums = np.array(list(set(row_nums).intersection(set(self.basis_row_nums))))
@@ -928,14 +1055,10 @@ class DQM:
 
         rows = self.frames[row_nums, :, 0]
 
-        if precision is None:
-            if self.mean_row_distance is None:
-                self.estimate_mean_row_distance()
-            # precision is at least 2 orders of magnitude below mean distance
-            precision = 10 ** (floor(log10(self.mean_row_distance)) - 2)
-        else:
-            # enforce that precision must be a power of 10
-            precision = 10 ** floor(log10(precision))
+        if self.mean_row_distance is None:
+            self.estimate_mean_row_distance()
+        # precision is at least 2 orders of magnitude below mean distance
+        precision = 10 ** (floor(log10(self.mean_row_distance)) - 2)
 
         # use 'epsilon' to avoid machine-precision issues in comparisons
         eps = precision / 1e4
@@ -950,7 +1073,7 @@ class DQM:
         # do binary search within this range, once both of these values are non-zero
         sigma_range = [0, 0]
 
-        if self.verbose:
+        if verbose:
             print('choosing sigma to precision of {:.1e} for basis of size {:,}...'.
                   format(precision, self.basis_rows.shape[0]))
 
@@ -961,7 +1084,7 @@ class DQM:
             min_overlap = np.min(overlaps)
             mean_overlap = np.mean(overlaps)
             sigma_is_good = min_overlap >= self.overlap_min_threshold and mean_overlap >= self.overlap_mean_threshold
-            if self.verbose:
+            if verbose:
                 print('for sigma = {:.{}f}: min overlap {:.3f}, mean overlap {:.3f}{}'.
                       format(sigma, max(0, round(-log10(precision))), min_overlap, mean_overlap,
                              ' (GOOD)' if sigma_is_good else ''))
@@ -976,7 +1099,7 @@ class DQM:
                         precision /= 10
                         assert precision >= min_precision, \
                             'precision must not go below {:.1e}'.format(min_precision)
-                        if self.verbose:
+                        if verbose:
                             print('increasing precision to {:.1e}...'.format(precision))
                     # end if increasing precision
                     sigma = round(sigma / 2, round(-log10(precision)))  # search for smaller sigma
@@ -1000,24 +1123,24 @@ class DQM:
         # end while not done searching
 
         sigma = sigma_range[1]
-        if self.verbose:
+        if verbose:
             print('final sigma is {:.{}f}'.format(sigma, max(0, round(-log10(precision)))))
 
         return sigma
-    # end method choose_sigma_for_rows
+    # end method _choose_sigma_for_rows
 
 
-    def stopped_row_nums(self, frames=None):
+    def _stopped_row_nums(self, frames=None):
         '''
-        for the given set of frames, return a list of row numbers for rows that have stopped (according to
+        For the given set of frames, return a list of row numbers for rows that have stopped (according to
         self.stopping_threshold).
 
-        :return: list of stopped row numbers
+        :return: List of stopped row numbers.
         '''
 
         if frames is None:
             assert self.frames is not None, 'must have frames in order to determine stopped row numbers'
-            return self.stopped_row_nums(self.frames)
+            return self._stopped_row_nums(self.frames)
         # end if frames not passed in
 
         assert type(frames) is np.ndarray and frames.ndim in [2, 3], "'frames' must be a 2-D or 3-D ndarray"
@@ -1032,7 +1155,7 @@ class DQM:
         num_rows = frames.shape[0]
         stopped_row_nums = [i for i in range(num_rows) if dists[i] < self.stopping_threshold]
         return stopped_row_nums
-    # end method stopped_row_nums
+    # end method _stopped_row_nums
 
 
     def set_stopping_threshold(self):
@@ -1044,35 +1167,32 @@ class DQM:
     # end method set_stopping_threshold
 
 
-    def build_frames(self, num_frames_to_build=20, frames=None, pare_frames=True):
+    def build_frames(self, num_frames_to_build=100, frames=None, pare_frames=True, verbose=None):
         '''
-        for given input 3-D array 'frames', build the specified number of new frames.
+        Build new frames in a DQM evolution.
 
-        self must have basis rows, operators, and positive sigma.
+        Instance must have basis rows, operators, and positive sigma.
 
-        we only use the last 2 frames of 'frames':
-        * we use the last 2 frames to test whether any rows have already stopped.  (if there aren't 2 frames,
-          then no rows have stopped yet.)
-        * we use the last frame to build the first new frame.
-
-        if 'frames' is passed in, we return all frames (old and new together).  otherwise, we set
+        If 'frames' is passed in, we return all frames (old and new together).  otherwise, we set
         self.frames to be all frames (old and new together) and return None.
 
-        notes on self.stopping_threshold:
-        * during evolution, a row is considered to have stopped when the distance traveled from one frame
-          to the next falls below this threshold. set stopping_threshold to 0 (or less than zero) to evolve all
-          points for all new frames being built.
-        * if all points have already stopped, then we don't build any new frames.  (in that case, if frames are
-          being returned, a reference to the frames passed in is returned.)
+        Stopped rows are not evolved further. (A row is 'stopped' when it fails to move at least
+        self.stopping_threshold distance from one frame to the next.)
 
-        :param num_frames_to_build: number of new frames to build
-        :param frames: 3-D array of frames.  if None, we use self.frames.  default None.
-        :return: if 'frames' was passed in, we return all frames (old and new together).  otherwise,
-        we return None.
+        :param num_frames_to_build: Number of new frames to build. Default 100.
+        :param frames: 3-D array of frames (<num rows x num dims x num frames>).  If None, we use self.frames.
+            Default None.
+        :param pare_frames: Boolean: if True, we delete any final frames where nothing is changing. Default True.
+        :param verbose: Boolean: if not None, overrides self.verbose. Default None.
+        :return: If 'frames' was passed in, we return all frames (old and new together). Otherwise,
+            we return None.
         '''
 
+        if verbose is None:
+            verbose = self.verbose
+
         if frames is None:
-            self.frames = self.build_frames(num_frames_to_build, self.frames, pare_frames)
+            self.frames = self.build_frames(num_frames_to_build, self.frames, pare_frames, verbose=verbose)
             return
         # end if using self.frames
 
@@ -1092,10 +1212,10 @@ class DQM:
             self.set_stopping_threshold()
 
         # deal with stopped rows
-        stopped_row_nums = self.stopped_row_nums(frames)
+        stopped_row_nums = self._stopped_row_nums(frames)
         not_stopped_row_nums = list(set(list(range(num_rows))).difference(set(stopped_row_nums)))
         if len(not_stopped_row_nums) == 0:
-            if self.verbose:
+            if verbose:
                 print('all rows have stopped -- no frames added')
             if pare_frames:
                 frames = self.pare_frames(frames)
@@ -1139,7 +1259,7 @@ class DQM:
         # end if/else calling C or Python
 
         t1 = time()
-        if self.verbose and t1 - t0 >= self.min_report_time:
+        if verbose and t1 - t0 >= self.min_report_time:
             print("built {} frames in {} seconds".format(num_frames_to_build, round(t1 - t0)))
 
         if have_stopped_rows:
@@ -1163,18 +1283,19 @@ class DQM:
 
     def build_frames_auto(self, batch_size=100, frames=None, pare_frames=True, max_num_frames=int(1e4)):
         '''
-        add new frames in batches until all rows have stopped.
+        Add new frames in batches until all rows have stopped.
 
-        if 'frames' is passed in, we return all frames (old and new together).  otherwise, we set
+        If 'frames' is passed in, we return all frames (old and new together). Otherwise, we set
         self.frames to be all frames (old and new together) and return None.
 
-        :param batch_size: number of new frames to add in each batch.  default 100.
-        :param frames: 3-D array of frames.  if None, we use self.frames.  default None.
-        :param pare_frames: boolean -- if True, we delete any final frames where nothing is changing. default True.
-        :param max_num_frames: integer maximum number of frames, including any initial frames. default 10,000.
+        :param batch_size: Number of new frames to add in each batch. Default 100.
+        :param frames: 3-D array of frames (<num rows x num dims x num frames>). If None, we use self.frames.
+            Default None.
+        :param pare_frames: Boolean: if True, we delete any final frames where nothing is changing. Default True.
+        :param max_num_frames: Integer maximum number of frames (including any initial frames). Default 10,000.
 
-        :return: if 'frames' was passed in, we return all frames (old and new together).  otherwise,
-        we return None.
+        :return: If 'frames' was passed in, we return all frames (old and new together). Otherwise,
+            we return None.
         '''
 
         if frames is None:
@@ -1192,22 +1313,18 @@ class DQM:
 
         num_frames_start = frames.shape[2]
 
-        # suppress output from build_frames inside the loop
-        verbose = self.verbose
-        self.verbose = False
-
         t0 = time()
 
         num_frames1 = -1
         num_frames2 = 0
         while num_frames2 > num_frames1:
-            if verbose:
+            if self.verbose:
                 print(f'adding {batch_size} frames...')
             num_frames1 = frames.shape[2]
-            frames = self.build_frames(batch_size, frames, pare_frames=False)
+            frames = self.build_frames(batch_size, frames, pare_frames=False, verbose=False)
             num_frames2 = frames.shape[2]
             if num_frames2 >= max_num_frames:
-                if verbose:
+                if self.verbose:
                     print(f'WARNING: have reached or exceeded max num frames of {max_num_frames}\
                           (current num frames is {num_frames2})')
                 break
@@ -1218,13 +1335,9 @@ class DQM:
 
         t1 = time()
 
-        if verbose:
+        if self.verbose:
             num_frames_end = num_frames2
             print(f'added a total of {num_frames_end - num_frames_start} frames in {round(t1 - t0)} seconds')
-
-        #  restore original setting
-        # 2FIX: if execution is interrupted, original setting will not be restored
-        self.verbose = verbose
 
         return frames
     # end method build_frames_auto
@@ -1232,11 +1345,12 @@ class DQM:
 
     def pare_frames(self, frames):
         '''
-        drop any frames at the end where all points have stopped moving -- i.e., where frame n+1 is
-        identical to frame n.
+        Drop any frames at the end where all points have stopped moving (i.e., where frame n + 1 is
+        identical to frame n).
 
-        :return: pared 3-D array of frames (which will be a reference to the frames passed in if no
-            frames were dropped)
+        :param frames: A 3-D array of frames. No default.
+        :return: A pared 3-D array of frames (which will be a reference to the frames passed in if no
+            frames were dropped).
         '''
 
         assert type(frames) is np.ndarray and frames.ndim == 3, "'frames' must be a 3-D array"
@@ -1245,36 +1359,47 @@ class DQM:
         if num_frames <= 1:
             return frames
 
-        # walk backward until we find a pair of consecutive frames that are not identical
-        for frame_idx in range(num_frames - 1, 0, -1):
-            frame_changed = not np.array_equal(frames[:, :, frame_idx], frames[:, :, frame_idx - 1])
-            if frame_changed:
-                break
-        # end for each comparison frame
+        # use binary search to find the last time a pair of consecutive frames differs
+        start_idx = 0
+        end_idx = num_frames - 1
+        done = False
+        while not done:
+            if end_idx - start_idx == 1:
+                done = True
+                start_same_as_end = np.array_equal(frames[:, :, start_idx], frames[:, :, end_idx])
+                if start_same_as_end:
+                    keep_idx = start_idx
+                else:
+                    keep_idx = end_idx
+            else:
+                # indices are more than 1 apart
+                mid_idx = round((start_idx + end_idx) / 2)
+                mid_same_as_end = np.array_equal(frames[:, :, mid_idx], frames[:, :, end_idx])
+                if mid_same_as_end:
+                    end_idx = mid_idx  # search downward (all frames in top half assumed to be the same)
+                else:
+                    start_idx = mid_idx  # search upward (all frames in bottom half assumed to be different)
+            # end if/else indices only 1 apart or not
+        # end while doing binary search
 
-        if not frame_changed:
-            if self.verbose:
-                print('WARNING: all frames are identical -- returning first frame')
-            frames = frames[:, :, :1]
-        else:
-            frames = frames[:, :, :frame_idx + 1]
-
-        return frames
+        return frames[:, :, :keep_idx + 1]
     # end method pare_frames
 
 
     def clear_frames(self, keep_frame_0=True):
         '''
-        keep frame 0 and clear all frames after frame 0.
+        Keep frame 0 and clear all frames in self.frames after frame 0.
 
-        :param keep_frame_0: boolean -- if False, we set self.frames to None. default True.
+        (Note that create_frame_0 and build_operators will both fail if self.frames has multiple frames in 3rd dim.
+        This is to prevent accidental loss of information, particularly since building frames can be slow.)
 
+        :param keep_frame_0: Boolean: if False, we set self.frames to None. default True.
         :return: None
         '''
 
         if self.frames is None:
             if self.verbose:
-                print("'frames' is not an array -- no frames to clear")
+                print("'self.frames' is not an array -- no frames to clear")
         elif not keep_frame_0:
             self.frames = None
         else:
@@ -1285,16 +1410,23 @@ class DQM:
 
     def pca_projection(self, dat_raw=None):
         '''
-        for the give raw-data matrix:
-        * center the columns, using self.raw_col_means (which must exist).
-        * create a rotated and truncated matrix by applying the rotation/projection defined by the combination
-          of self.pca_eigvecs and the number of PCA dimensions being used (inferred from self.frames).
-        * calculate the proportional norms for each row -- meaning, the centered/rotated/truncated L2 norm divided
-          by the centered-only L2 norm.  (if all PCA dimensions are being used, these proportions should all be 1,
-          up to machine precision.)
+        Apply PCA 'projection' (centering + rotation + truncation) to a raw data matrix, as follows:
 
-        :param dat_raw: 2-D raw-data matrix.  if None, we use self.raw_data.  default None.
-        :return: vector of proportional norms (truncated / original) for each row
+        * Center the columns by subtracting self.raw_col_means (which must exist).
+        * Create a rotated and truncated matrix by applying the rotation/projection defined by the combination
+          of self.pca_eigvecs and the number of PCA dimensions being used (inferred from self.frames in the
+          2nd dim).
+        * Calculate the proportional norms for each row in the raw data -- meaning, the centered/rotated/truncated
+          L2 norm divided by the centered-only L2 norm.
+
+        The instance must have stored frames and PCA results.
+
+        Importantly, if dat_raw is passed in, we apply the 'in-sample' PCA projection based on the original
+        self.raw_data, *not* based on this new dat_raw. (For more detail, see the discussion of running new points
+        in the user guide.)
+
+        :param dat_raw: 2-D raw-data matrix.  if None, we use self.raw_data. Default None.
+        :return: A vector of proportional norms (truncated / original) for each row.
         '''
 
         if dat_raw is None:
@@ -1347,32 +1479,35 @@ class DQM:
 
     def run_new_points(self, dat_raw_oos):
         '''
-        Given a raw-data matrix of new ('out-of-sample') points:
-        * apply the 'in-sample' PCA rotation/projection (subtract in-sample column means, apply in-sample
-          PCA rotation and subspace projection)
-        * build basis overlaps for the new points
-        * evolve the new out-of-sample points using the in-sample map (i.e., operators) -- to as many frames
-          as currently exist in self.frames
+        Given dat_raw_oos, which is a raw-data matrix of new ('out-of-sample') points:
 
-        :param dat_raw_oos: 2-D raw-data matrix of new, 'out-of-sample' points
+        * Apply the 'in-sample' PCA rotation/projection (subtract in-sample column means, apply in-sample
+          PCA rotation and subspace truncation/projection)
+        * Build basis overlaps for the new points.
+        * Evolve the new out-of-sample points, using the in-sample map (that is, the stored DQM operators),
+          to as many frames as currently exist in self.frames.
+
+        :param dat_raw_oos: 2-D raw-data matrix of new 'out-of-sample' points. Must have the same number of
+            columns as self.raw_data.
         :return: tuple of:
-          * norm_props_is: vector of in-sample proportional norms (rotated/truncated L2 norms divided by
-            original L2 norms)
-          * norm_props_oos: vector of out-of-sample proportional norms (rotated/truncated L2 norms divided by
-            original L2 norms)
-          * overlaps_is: vector of in-sample basis overlaps (for all non-basis rows)
-          * overlaps_oos: vector of out-of-sample basis overlaps
-          * frames_oos: array of out-of-sample evolved frames
+
+            * frames_oos: 3-D array of out-of-sample evolved frames
+            * overlaps_is: vector of in-sample basis overlaps (for all non-basis rows)
+            * overlaps_oos: vector of out-of-sample basis overlaps
+            * norm_props_is: vector of in-sample proportional norms (rotated/truncated L2 norms divided by
+              original L2 norms)
+            * norm_props_oos: vector of out-of-sample proportional norms (rotated/truncated L2 norms divided by
+              original L2 norms)
         '''
 
         assert type(dat_raw_oos) is np.ndarray and dat_raw_oos.ndim == 2, \
             "'dat_raw_oos' must be a 2-D ndarray"
+        assert dat_raw_oos.shape[1] == self.raw_data.shape[1], \
+            "'dat_raw_oos must have the same number of columns as self.raw_data"
 
         if self.pca_transform:
             assert type(self.raw_col_means) is np.ndarray and self.raw_col_means.ndim == 1, \
                 "must have raw column means to run new out-of-sample points"
-            assert dat_raw_oos.shape[1] == self.raw_col_means.size,\
-                "'dat_raw_oos must have the correct number of columns"
 
             # do the in-sample PCA projection for both in-sample points and out-of-sample points
             norm_props_is = self.pca_projection()
@@ -1441,20 +1576,24 @@ class DQM:
         num_frames_to_build = self.frames.shape[2] - 1
         frames_oos = self.build_frames(num_frames_to_build, frames=frame0_oos)
 
-        return norm_props_is, norm_props_oos, overlaps_is, overlaps_oos, frames_oos
+        return frames_oos, overlaps_is, overlaps_oos, norm_props_is, norm_props_oos
     # end method run_new_points
 
 
     def run_simple(self, dat_raw, sigma):
         '''
-        given raw data and a value of sigma:
-        * store raw data and sigma in the instance
-        # create frame 0 using all PCA dimensions by default
-        * build operators, using a full basis by default and default value of mass
-        * build frames auto, in batches of 100 by default
+        Do a simplified full DQM 'run', as follows -- given dat_raw (raw-data matrix) and a value of sigma:
 
-        :param dat_raw: raw data - 2-D ndarray
-        :param sigma: positive real value for sigma
+        * Store raw data and sigma in the instance.
+        * Create and store frame 0 (using all PCA dimensions)
+        * Build and store operators (using a full basis and default value of mass)
+        * Build and store frames (using build_frames_auto) until all points stop moving
+
+        For small data sets, doing simple runs with various values of sigma can be the quickest way to understand
+        the landscape that DQM is revealing.
+
+        :param dat_raw: Raw data (2-D matrix)
+        :param sigma: positive value for sigma
         :return: None
         '''
 
@@ -1474,22 +1613,23 @@ class DQM:
     @classmethod
     def exists(cls, dir, sub_dir=None):
         '''
-        check whether 'dir' contains a saved dqm instance.  if sub_dir is not None, also check
-        whether sub_dir contains saved dqm info.
+        Check whether dir contains a saved DQM instance. If sub_dir is not None, also check
+        whether sub_dir contains saved DQM info.
 
-        :param dir: relative or absolute path
-        :param sub_dir: name of sub-directory for basis-specifc saved data
-        :return: boolean -- true if dir contains a saved dqm instance.  (if sub_dir is not None,
-            sub_dir must also have saved basis-specific dqm info in order for us to return true.)
+        :param dir: Relative or absolute path to a folder. No default.
+        :param sub_dir: Name of subdirectory (inside the 'dir' folder) for basis-specific saved data.
+            Default None.
+        :return: Boolean: True if dir contains a saved DQM instance. (If sub_dir is not None,
+            sub_dir must also have saved basis-specific DQM info in order for us to return True.)
         '''
 
-        member_path = os.path.join(dir, 'members')
+        member_path = os.path.join(dir, 'dqm_members')
         if not os.path.exists(member_path):
             return False
         elif sub_dir is None:
             return True
         else:
-            sub_member_path = os.path.join(dir, sub_dir, 'members')
+            sub_member_path = os.path.join(dir, sub_dir, 'dqm_members')
             return os.path.exists(sub_member_path)
     # end class method exists
 
@@ -1502,20 +1642,22 @@ class DQM:
     # FOR SPEED.  THINK THIS LOGIC THROUGH MORE CAREFULLY...)
     def save(self, main_dir, sub_dir=None):
         '''
-        save an instance of the dqm class:
-        * save numpy arrays separately
-        * pickle everything else in the instance
+        Save an instance of the DQM class:
 
-        things that are common to multiple landscapes (raw data, PCA results, etc.) are saved in main_dir,
-        which can be an absolute or relative path.
+        * Save numpy arrays separately.
+        * Pickle everything else in the instance.
 
-        things that are specific to a given landscape are saved in sub_dir, which is relative to main_dir
-        (so, can be just a folder name)
+        Things that are common to multiple landscapes (raw data, PCA results) are saved in main_dir, which can
+        be an absolute or relative path to a folder.
 
-        both main_dir and sub_dir (if not None) are created if they do not exist.
+        Things that are specific to a given landscape (basis, DQM parameters, operators, evolved frames) are
+        saved in sub_dir, which is relative to main_dir (so, typically sub_dir is just a folder name)
 
-        :param main_dir: relative or absolute path
-        :param sub_dir: path relative to main_dir.  default None.
+        Both main_dir and sub_dir (if not None) are created if they do not exist.
+
+        :param main_dir: Relative or absolute path to a folder.
+        :param sub_dir: Name of subdirectory (inside the 'main_dir' folder) for basis-specific saved data.
+            Default None.
         :return: None
         '''
 
@@ -1551,7 +1693,7 @@ class DQM:
             'call_c': self.call_c,
             'mean_row_distance': self.mean_row_distance
         }
-        with open(os.path.join(main_dir, 'members'), 'wb') as pickle_file:
+        with open(os.path.join(main_dir, 'dqm_members'), 'wb') as pickle_file:
             pickle.dump(members, pickle_file)
 
         ## things that are specific to a given landscape (basis, parameter values, and operators)
@@ -1567,7 +1709,6 @@ class DQM:
             if self.frames is not None:
                 np.save(os.path.join(sub_dir, 'frames.npy'), self.frames)
             members = {
-                'basis_method': self.basis_method,
                 'basis_num_chunks': self.basis_num_chunks,
                 'basis_rand_seed': self.basis_rand_seed,
                 'basis_row_nums': self.basis_row_nums,
@@ -1581,7 +1722,7 @@ class DQM:
                 'overlap_min_threshold': self.overlap_min_threshold,
                 'stopping_threshold': self.stopping_threshold
             }
-            with open(os.path.join(sub_dir, 'members'), 'wb') as pickle_file:
+            with open(os.path.join(sub_dir, 'dqm_members'), 'wb') as pickle_file:
                 pickle.dump(members, pickle_file)
         # end if sub_dir is not None
 
@@ -1595,13 +1736,14 @@ class DQM:
     @classmethod
     def load(cls, main_dir, sub_dir=None, load_raw_data=True, verbose=True):
         '''
-        load an instance of the dqm class from disk and return it.
+        Load an instance of the DQM class from disk and return it.
 
-        :param main_dir: relative or absolute path
-        :param sub_dir: path relative to main_dir.  default None.
-        :param load_raw_data: boolean -- if true, we load raw data.  set to false to save time if raw
-            data is very large.  default True.
-        :return: a dqm instance with data loaded from 'dir'
+        :param main_dir: Relative or absolute path to folder. No default.
+        :param sub_dir: Name of subdirectory (inside the 'main_dir' folder) for basis-specific saved data.
+            Default None.
+        :param load_raw_data: Boolean: if True, we load raw data. Set to False to save time if raw
+            data is very large. Default True.
+        :return: a DQM instance with data loaded from 'main_dir' (and sub_dir, if not None).
         '''
 
         t0 = time()
@@ -1610,7 +1752,7 @@ class DQM:
         if sub_dir:
             sub_dir_name = sub_dir
             sub_dir = os.path.join(main_dir, sub_dir)
-            assert os.path.exists(os.path.join(sub_dir, 'members')), \
+            assert os.path.exists(os.path.join(sub_dir, 'dqm_members')), \
                 f"sub dir '{sub_dir_name}' must exist and have saved dqm data"
         # end if sub_dir is not None
 
@@ -1636,7 +1778,7 @@ class DQM:
         pth = os.path.join(main_dir, 'frame_0.npy')
         if os.path.exists(pth):
             dqm.frames = np.load(pth, allow_pickle=True)
-        pth = os.path.join(main_dir, 'members')
+        pth = os.path.join(main_dir, 'dqm_members')
         if os.path.exists(pth):
             with open(pth, 'rb') as pickle_file:
                 members = pickle.load(pickle_file)
@@ -1667,11 +1809,10 @@ class DQM:
             pth = os.path.join(sub_dir, 'frames.npy')
             if os.path.exists(pth):
                 dqm.frames = np.load(pth, allow_pickle=True)
-            pth = os.path.join(sub_dir, 'members')
+            pth = os.path.join(sub_dir, 'dqm_members')
             if os.path.exists(pth):
                 with open(pth, 'rb') as pickle_file:
                     members = pickle.load(pickle_file)
-                    dqm.basis_method = members['basis_method']
                     dqm.basis_num_chunks = members['basis_num_chunks']
                     dqm.basis_rand_seed = members['basis_rand_seed']
                     dqm.basis_row_nums = members['basis_row_nums']

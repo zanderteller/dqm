@@ -1,7 +1,3 @@
-'''
-DQM utilities
-'''
-
 import numpy as np
 
 from . import dqm_lib  # compiled-function library
@@ -21,31 +17,35 @@ except ModuleNotFoundError:
 
 def pca(mat, verbose=True):
     '''
-    given a matrix, compute and return the PCA eigenvalues and associated eigenvectors (principal components).
+    Given a matrix, compute and return the PCA eigenvalues and associated eigenvectors (principal components).
 
-    handle 2 cases differently:
-    * if 'mat' has more rows than columns, compute the covariance matrix for the columns and find the
-      eigenvectors of the covariance matrix, which are the principal components.
-    * if 'mat' has more columns than rows, compute the covariance matrix for the rows, and find the
-      eigenvectors for that covariance matrix.  these eigenvectors are the left singular vectors (U) of
-      the SVD decomposition of 'mat'.  then use the definition of SVD (M = U @ S @ VT) to compute VT,
-      whose rows are the right singular vectors, which are the PCA eigenvectors that we want.  (in this
-      case, for numerical stability, we drop eigenvalues that are less than 1e-10 times the largest
-      eigenvalue.  we set these too-small eigenvalues and their associated eigenvectors equal to zero.)
-
-    notes
-    * treating the 2 cases above differently allows us to handle matrices with a large number of rows or
-      a large number of columns more efficiently.  this approach can handle matrices where numpy.linalg.svd
-      quickly runs out of memory.  (Matrices with a large number of rows *and* a large number of columns
-      will still be very memory-intensive.)
-    * in both cases, we can use numpy.linalg.eigh instead of numpy.linalg.eig because we know the covariance
-      matrix is symmetric.  (eigh is faster and guarantees the eigenvalues are returned in ascending order
-      of magnitude.)
-
-    :param mat: 2-D float-64 matrix
+    :param mat: A 2-D real-valued matrix.
     :return: tuple of:
-     * eigvals: vector of eigenvalues, in descending order of magnitude (all are non-negative).
-     * eigvecs: matrix with corresponding eigenvectors (principal components) in the columns.
+
+        * Vector of eigenvalues, in descending order of magnitude (all are non-negative).
+        * Matrix with corresponding eigenvectors (principal components) in the columns.
+    '''
+
+    '''
+    Handle 2 cases differently:
+    * If 'mat' has more rows than columns, compute the covariance matrix for the columns and find the
+      eigenvectors of the covariance matrix, which are the principal components.
+    * If 'mat' has more columns than rows, compute the covariance matrix for the rows, and find the
+      eigenvectors for that covariance matrix. These eigenvectors are the left singular vectors (U) of
+        the SVD decomposition of 'mat' (after centering). Then use the definition of SVD (M = U @ S @ VT)
+        to compute VT, whose rows are the right singular vectors, which are the PCA eigenvectors that we
+        want. (In this case, for numerical stability, we drop eigenvalues that are less than 1e-10 times
+        the largest eigenvalue. We set these too-small eigenvalues and their associated eigenvectors equal
+        to zero.)
+
+    Treating the 2 cases above differently allows us to handle matrices with a large number of rows or
+    a large number of columns more efficiently. This approach can handle matrices where numpy.linalg.svd
+    quickly runs out of memory. (Matrices with a large number of rows *and* a large number of columns
+    will still be very memory-intensive.)
+
+    In both cases, we can use numpy.linalg.eigh instead of numpy.linalg.eig because we know the covariance
+    matrix is symmetric. (eigh is faster and guarantees the eigenvalues are returned in ascending order of
+    magnitude.)
     '''
 
     assert type(mat) is np.ndarray and mat.ndim == 2 and mat.dtype == np.float64, \
@@ -128,21 +128,26 @@ def pca(mat, verbose=True):
 
 def extract_manifolds(mat, max_dist):
     '''
-    extract manifolds from a matrix.  we here define a manifold as a group of rows such that every
-    row is within max_dist Euclidean distance of at least one other row in the manifold.  the largest
-    distance between 2 rows in a manifold may be much larger than max_dist.
+    Extract manifolds from a matrix.
 
-    note: this function calls compiled C++ code.  this function is slower than the python-only version in
+    We here define a manifold (in a somewhat nonstandard but very simple way) as a group of rows such that every
+    row is within max_dist Euclidean distance of at least one other row in the manifold. (The largest distance
+    between 2 rows in a manifold may be much larger than max_dist.)
+
+    :param mat: A 2-D real-valued matrix. No default.
+    :param max_dist: A row being within max_dist Euclidean distance of any other row in a manifold
+        will make that row part of that same manifold. No default.
+    :return: a tuple of:
+
+        * a list of lists of row numbers for the manifolds. the list of manifolds is sorted by manifold
+          size (number of rows), in descending order.
+        * a parallel list of manifold sizes
+    '''
+
+    '''
+    This function calls compiled (C++) code. This function is slower than the python-only version in
     some cases, but it's generally much faster for large numbers of rows, meaning more than 100k or so
     (except maybe in certain corner cases).
-
-    :param mat: a 2-D real-valued matrix
-    :param max_dist: a row being within max_dist Euclidean distance of any other row in a manifold
-        will make that row part of the manifold
-    :return: a tuple of:
-        * a list of lists of row numbers for the manifolds. the list of manifolds is sorted by manifold
-        size (number of rows), in descending order
-        * a parallel list of manifold sizes
     '''
 
     assert type(mat) is np.ndarray and mat.ndim == 2, "'mat' must be a 2-dimensional ndarray"
@@ -159,7 +164,7 @@ def extract_manifolds(mat, max_dist):
 
     if dqm_lib is None:
         print('## WARNING: compiled-library code for extract_manifolds not found -- calling Python code')
-        manifolds, manifold_sizes = extract_manifolds_python(mat, max_dist)
+        manifolds, manifold_sizes = _extract_manifolds_python(mat, max_dist)
         return manifolds, manifold_sizes
     # end if don't have compiled-library code
 
@@ -202,22 +207,25 @@ def extract_manifolds(mat, max_dist):
 # end function extract_manifolds
 
 
-def extract_manifolds_python(mat, max_dist):
+def _extract_manifolds_python(mat, max_dist):
     '''
-    extract manifolds from a matrix.  we here define a manifold as a group of rows such that every
-    row is within max_dist Euclidean distance of at least one other row in the manifold.  the largest
-    distance between 2 rows in a manifold may be much larger than max_dist.
+    Extract manifolds from a matrix.
 
-    this is the version of extract_manifolds that does *not* call the compiled C++ code.  this python-only
+    We here define a manifold (in a somewhat nonstandard but very simple way) as a group of rows such that every
+    row is within max_dist Euclidean distance of at least one other row in the manifold. (The largest distance
+    between 2 rows in a manifold may be much larger than max_dist.)
+
+    This is the version of extract_manifolds that does *not* call the compiled C++ code. This python-only
     version is faster in some cases, but it's unusably slow for large numbers of rows, meaning more than 100k
     or so (except maybe in certain corner cases).
 
-    :param mat: a 2-D real-valued matrix
-    :param max_dist: a row being within max_dist Euclidean distance of any other row in a manifold
-        will make that row part of the manifold
+    :param mat: A 2-D real-valued matrix. No default.
+    :param max_dist: A row being within max_dist Euclidean distance of any other row in a manifold
+        will make that row part of that same manifold. No default.
     :return: a tuple of:
+
         * a list of lists of row numbers for the manifolds. the list of manifolds is sorted by manifold
-        size (number of rows), in descending order
+          size (number of rows), in descending order.
         * a parallel list of manifold sizes
     '''
 
@@ -233,7 +241,7 @@ def extract_manifolds_python(mat, max_dist):
     while np.any(row_nums_left):
         seed_row_num = row_nums_left[0]
         row_nums_left = row_nums_left[1:]
-        new_manifold = extract_manifold_python(mat, max_dist, seed_row_num, row_nums_left)
+        new_manifold = _extract_manifold_python(mat, max_dist, seed_row_num, row_nums_left)
         manifolds.append(new_manifold)
         row_nums_left = list(set(row_nums_left).difference(set(new_manifold)))
     # end while any rows left
@@ -244,26 +252,20 @@ def extract_manifolds_python(mat, max_dist):
     manifold_sizes = [len(manifold) for manifold in manifolds]
 
     return manifolds, manifold_sizes
-# end function extract_manifolds_python
+# end function _extract_manifolds_python
 
 
-def extract_manifold_python(mat, max_dist, seed_row_num, row_nums=None):
+def _extract_manifold_python(mat, max_dist, seed_row_num, row_nums=None):
     '''
-    extract a single manifold from a matrix.  we here define a manifold as a group of rows such that
-    every row is within max_dist Euclidean distance of at least one other row in the manifold.  the
-    largest distance between 2 rows in the manifold may be much larger than max_dist.
+    Extract a single manifold from a matrix. (See comments for extract_manifolds_python for details.)
 
-    note: we call this function 'extract_manifold_python' to highlight the fact that it's called by
-    the python-only function 'extract_manifolds_python' (as opposed to the 'extract_manifolds' function,
-    which calls compiled C++ code).
-
-    :param mat: a 2-D real-valued matrix
-    :param max_dist: a row being within max_dist Euclidean distance of any other row in a manifold
-        will make that row part of the manifold
-    :param seed_row_num: row number for the seed for the manifold
-    :param row_nums: list of row numbers to consider (may or may not contain seed_row_num).  if None,
-        we use all row numbers.  default None.
-    :return: list of row numbers for the manifold, starting with seed_row_num
+    :param mat: A 2-D real-valued matrix. No default.
+    :param max_dist: A row being within max_dist Euclidean distance of any other row in a manifold
+        will make that row part of that same manifold. No default.
+    :param seed_row_num: Row number for the seed row for the manifold.
+    :param row_nums: List of row numbers to consider (may or may not contain seed_row_num). If None, we use
+        all row numbers. Default None.
+    :return: List of row numbers for the manifold, starting with seed_row_num.
     '''
 
     assert type(mat) is np.ndarray and mat.ndim == 2, "'mat' must be a 2-dimensional ndarray"
@@ -311,15 +313,18 @@ def extract_manifold_python(mat, max_dist, seed_row_num, row_nums=None):
     # end while seeds and candidates left
 
     return man_row_nums.tolist()
-# end function extract_manifold_python
+# end function _extract_manifold_python
 
 
 def nearest_neighbors(mat):
     '''
-    return nearest-neighbor row number and distance for each row in mat
+    Return nearest-neighbor row number and distance for each row in mat.
 
-    :param mat: a 2-D real-valued matrix
-    :return: tuple of (nn_row_nums, nn_dists)
+    :param mat: a 2-D real-valued matrix. No default.
+    :return: tuple of:
+
+        * Vector of nearest-neighbor row number for each row.
+        * Vector of nearest-neighbor distances for each row.
     '''
 
     assert type(mat) is np.ndarray and mat.ndim == 2, "'mat' must be a 2-dimensional array"
@@ -332,22 +337,25 @@ def nearest_neighbors(mat):
         dqm_lib.NearestNeighborsC(mat, num_rows, num_cols, nn_row_nums, nn_dists)
     else:
         print('## WARNING: compiled-library code for nearest_neighbors not found -- calling Python code')
-        nn_row_nums, nn_dists = nearest_neighbors_python(mat)
+        nn_row_nums, nn_dists = _nearest_neighbors_python(mat)
     # end if /else have compiled-library code or not
 
     return nn_row_nums, nn_dists
 # end function nearest_neighbors
 
 
-def nearest_neighbors_python(mat):
+def _nearest_neighbors_python(mat):
     '''
-    return nearest-neighbor row number and distance for each row in mat
+    Return nearest-neighbor row number and distance for each row in mat.
 
-    this is the version of nearest_neighbors that does *not* call the compiled C++ code.
-    it will generally be much slower.
+    This is the version of nearest_neighbors that does *not* call the compiled C++ code. It will generally be
+    much slower.
 
-    :param mat: a 2-D real-valued matrix
-    :return: tuple of (nn_row_nums, nn_dists)
+    :param mat: a 2-D real-valued matrix. No default.
+    :return: tuple of:
+
+        * Vector of nearest-neighbor row number for each row.
+        * Vector of nearest-neighbor distances for each row.
     '''
 
     assert type(mat) is np.ndarray and mat.ndim == 2, "'mat' must be a 2-dimensional array"
@@ -366,43 +374,52 @@ def nearest_neighbors_python(mat):
     # end for each row
 
     return nn_row_nums, nn_dists
-# end function nearest_neighbors_python
+# end function _nearest_neighbors_python
 
 
 def plot_frames(frames, color='blue', size=5, skip_frames=1, fps=10, title='', labels=['X', 'Y', 'Z'],
                 width=800, height=800, show_as_cube=True, show_gridlines=True, show_ticklabels=True):
     '''
-    display interactive animated 3-D plot of a set of frames, using Plotly
+    Display interactive animated 3-D plot of a set of frames, using Plotly.
 
     WARNING -- WHEN PLOTTING LARGE NUMBERS OF POINTS AND/OR FRAMES:
-        * file sizes can get very big for saved plots. (this may be a problem if, for example, you're working in a
-          Jupyter notebook with autosave on.)
-        * specifying different colors or sizes for each frame will make rendering take *much* longer.
 
-    :param frames: 2-D or 3-D ndarray of frames. if there are more than 3 columns in 2nd dim, we use the first
-        3 columns for plotting.
-    :param color: color information for points -- can be:
-        * string (must be a color understood by Plotly) applied to all points. default 'blue'.
-        * array/list/tuple of length 3 (RGB) or 4 (RGBA), applied to all points.
-        * 2-D array, <num_rows x 3 (RGB) or 4 (RGBA)>, applied to each point in every frame.
-        * 3-D array, <num_rows x 3 (RGB) or 4 (RGBA) x num_frames>, applied to each point in each frame.
-            (if using skip_frames > 1, frames and colors should line up as passed in -- both will be subselected.)
-    :param size: size information for points -- can be:
-        * scalar, applied to all points. default 5.
-        * 1-D array, <num_rows>, applied to each point in every frame.
-        * 2-D array, <num_rows x num_frames>, applied to each point in each frames. (if using skip_frames > 1,
-            frames and sizes should line up as passed in -- both will be subselected.)
-    :param skip_frames: positive integer -- if > 1, plot every nth frame (so, for a value of 2, plot every other frame).
-        default 1. (this is useful because plotting a large number of frames can be slow and memory-intensive.)
-    :param fps: frames per second. default 10.
-    :param title: title for the plot. default ''.
-    :param labels: array/list/tuple of axis labels, or None. default ['X', 'Y', 'Z'].
-    :param width: figure width in pixels. default 800.
-    :param height: figure height in pixels. default 800.
-    :param show_as_cube: boolean -- if True show plot as a cube, if False show plot with correct axis-range proportions.
-        default True.
-    :param show_gridlines: boolean - whether to show gridlines. default True.
-    :param show_ticklabels: boolean -- whether to show axis tick labels. default True.
+        * File sizes can get very big for saved plots. (This may be a problem if, for example, you're working
+          in a Jupyter notebook with autosave turned on.)
+        * Specifying different colors and/or different sizes for each frame will make rendering take *much* longer.
+
+    :param frames: 2-D or 3-D array of frames. If there are more than 3 columns in 2nd dim, we use the first
+        3 columns for plotting. Animation is only enabled if there are multiple frames in 3rd dim.
+    :param color: Color information for points -- can be:
+
+        * String (must be a color understood by Plotly), applied to all points. Default 'blue'.
+        * Array/list/tuple of length 3 (RGB) or 4 (RGBA), with float values in [0, 1], applied to all points.
+        * 2-D array, <num_rows x 3 (RGB) or 4 (RGBA)>, with float values in [0, 1], applied to each point in
+          all frames.
+        * 3-D array, <num_rows x 3 (RGB) or 4 (RGBA) x num_frames>, with float values in [0, 1], applied to each
+          point in each frame. (If using skip_frames > 1, frames and colors should line up as passed in -- both
+          will be subselected.)
+
+    :param size: Size information for points -- can be:
+
+        * Scalar, applied to all points. default 5.
+        * 1-D array, <num_rows>, applied to each point in all frames.
+        * 2-D array, <num_rows x num_frames>, applied to each point in each frame. (If using skip_frames > 1,
+          frames and sizes should line up as passed in -- both will be subselected.)
+
+    :param skip_frames: Positive integer: if > 1, plot every nth frame (so, for a value of 2, plot every other
+        frame). Default 1. (This feature is useful because plotting a large number of frames can be slow and
+        memory-intensive.)
+    :param fps: Frames per second. Default 10. (Plotly may not be able to handle a frame rate much larger than
+        10 or 15 fps. You can use skip_frames to help with this.)
+    :param title: Title for the plot. Default "".
+    :param labels: Array/list/tuple of axis labels, or None. Default ['X', 'Y', 'Z'].
+    :param width: Figure width in pixels. Default 800.
+    :param height: Figure height in pixels. Default 800.
+    :param show_as_cube: Boolean: if True show plot as a cube, if False show plot with correct axis-range
+        proportions. Default True.
+    :param show_gridlines: Boolean: whether to show gridlines. Default True.
+    :param show_ticklabels: Boolean: whether to show axis tick labels. Default True.
 
     :return: None
     '''
@@ -540,9 +557,10 @@ def plot_frames(frames, color='blue', size=5, skip_frames=1, fps=10, title='', l
              "len": 0.9,
              "x": 0.1,
              "y": 0,
+             "currentvalue": {"prefix": "Frame "},
              "steps": [
                  {"args": [[f.name], frame_args(0)],
-                  "label": str(real_frame_idxs[k]),
+                  "label": '{:,}'.format(real_frame_idxs[k]),
                   "method": "animate"
                   } for k, f in enumerate(go_frames)
              ]
@@ -602,28 +620,32 @@ def plot_frames(frames, color='blue', size=5, skip_frames=1, fps=10, title='', l
 
 def plot_frames_ipv(frames, color='blue', size=4, skip_frames=1, fps=10, labels=['X', 'Y', 'Z'], show_axes=True):
     '''
-    display interactive animated 3-D plot of a set of frames, using IPyVolume
+    Display interactive animated 3-D plot of a set of frames, using IPyVolume.
 
     WARNING: IPyVolume is not a fully mature/stable package -- it may be buggy.
 
-    :param frames: 2-D or 3-D ndarray of frames. if there are more than 3 columns in 2nd dim, we use the first
-        3 columns for plotting.
-    :param color: color information for points -- can be:
-        * string (must be a color understood by Plotly) applied to all points. default 'blue'.
-        * array/list/tuple of length 3 (RGB) or 4 (RGBA), applied to all points.
-        * 2-D array, <num_rows x 3 (RGB) or 4 (RGBA)>, applied to each point in every frame.
-        * 3-D array, <num_rows x 3 (RGB) or 4 (RGBA) x num_frames>, applied to each point in each frame.
-            (if using skip_frames > 1, frames and colors should line up as passed in -- both will be subselected.)
-    :param size: size information for points -- can be:
-        * scalar, applied to all points. default 5.
-        * 1-D array, <num_rows>, applied to each point in every frame.
-        * 2-D array, <num_rows x num_frames>, applied to each point in each frames. (if using skip_frames > 1,
-            frames and sizes should line up as passed in -- both will be subselected.)
-    :param skip_frames: positive integer -- if > 1, plot every nth frame (so, for a value of 2, plot every other frame).
-        default 1. (this is useful because plotting a large number of frames can be slow and memory-intensive.)
-    :param fps: frames per second. default 10.
-    :param labels: array/list/tuple of axis labels. default ['X', 'Y', 'Z'].
-    :param show_axes: boolean - whether to show axes (axis label and tick labels). 'labels' is ignored if this is
+    :param frames: 2-D or 3-D array of frames. If there are more than 3 columns in 2nd dim, we use the first
+        3 columns for plotting. Animation is only enabled if there are multiple frames in 3rd dim.
+    :param color: Color information for points -- can be:
+
+        * String (must be a color understood by Plotly), applied to all points. Default 'blue'.
+        * Array/list/tuple of length 3 (RGB) or 4 (RGBA), with float values in [0, 1], applied to all points.
+        * 2-D array, <num_rows x 3 (RGB) or 4 (RGBA)>, with float values in [0, 1], applied to each point in
+          all frames.
+        * 3-D array, <num_rows x 3 (RGB) or 4 (RGBA) x num_frames>, with float values in [0, 1], applied to each
+          point in each frame. (If using skip_frames > 1, frames and colors should line up as passed in -- both
+          will be subselected.)
+    :param size: Size information for points -- can be:
+
+        * Scalar, applied to all points. default 4.
+        * 1-D array, <num_rows>, applied to each point in all frames.
+        * 2-D array, <num_rows x num_frames>, applied to each point in each frame. (If using skip_frames > 1,
+          frames and sizes should line up as passed in -- both will be subselected.)
+    :param skip_frames: Positive integer: if > 1, plot every nth frame (so, for a value of 2, plot every other
+        frame). Default 1.
+    :param fps: Frames per second. default 10.
+    :param labels: Array/list/tuple of axis labels. default ['X', 'Y', 'Z'].
+    :param show_axes: Boolean: whether to show axes (axis label and tick labels). 'labels' is ignored if this is
         False. default True.
 
     :return: None
@@ -716,18 +738,17 @@ def plot_frames_ipv(frames, color='blue', size=4, skip_frames=1, fps=10, labels=
 
 def cat_frames(frames1, frames2=None):
     '''
-    given 2 sets of frames, concatenate them in dim 0
+    Given multiple sets of frames, concatenate them in 1st dim.
 
-    both sets of frames must have the same number of columns in dim 1
+    All sets of frames must have the same number of columns in 2nd dim.
 
-    if one set of frames has more frames than the other in dim 2, we replicate the last frame
-    of the one with fewer frames
+    If the numbers of frames in 3rd dim don't match in each set of frames, we replicate the last frame in each
+    set as needed.
 
-    :param frames1: 3-D ndarray of frames, or list of 3-D ndarrays of frames.  if it's a list,
-        we cat together all sets of frames in the list and return the result.
-    :param frames2: 3-D ndarray of frames
-    :return: new 3-D ndarray of frames, with shape:
-        <frames1.shape[0] + frames2.shape[0], frames1.shape[1], max(frames1.shape[2], frames2.shape[2])>
+    :param frames1: 3-D array of frames, or list of 3-D arrays of frames. If it's a list, we cat together
+        all sets of frames in the list and return the result. No default.
+    :param frames2: 3-D ndarray of frames. Must be None if frames1 is a list. Default None.
+    :return: new combined 3-D array of frames.
     '''
 
     if type(frames1) is list:
@@ -764,10 +785,11 @@ def cat_frames(frames1, frames2=None):
 
 def add_bookend_frames(frames, num_bookend_frames):
     '''
-    add 'bookend' frames at beginning and end, which are just duplicates of the first and last frames.
+    Add 'bookend' frames at beginning and end of a set of frames -- bookend frames are just duplicates of the
+    first and last frames. (Bookend frames can make an animation playing on repeat much easier to follow.)
 
-    :param frames: 3-dimensional array (points in dim 0, dimensions in dim 1, frames are in dim 2)
-    :param num_bookend_frames: number of bookend frames to add at beginning and end of frames
+    :param frames: 3-D array of frames: <num rows x num dims x num_frames>.
+    :param num_bookend_frames: number of bookend frames to add at beginning and end of frames.
     :return: new array of frames with bookend frames included
     '''
 
@@ -789,14 +811,17 @@ def add_bookend_frames(frames, num_bookend_frames):
 
 def rescale_frames(frames):
     '''
-    rescale each frame so that the first column always has the same scale
+    Rescale each frame so that the first column always has the same scale.
 
-    we do the following separately for each frame:
-    * center all columns (by subtracting the mean from each)
-    * divide all columns by the range of the first column
+    This function is useful for 'zooming in' on structures that shrink as DQM evolution proceeds.
 
-    :param frames: 3-D ndarray of frames
-    :return: rescaled frames
+    We do the following separately for each frame:
+
+        * center all columns (by subtracting the mean from each)
+        * divide all columns by the range (max value minus min value) of the first column
+
+    :param frames: 3-D array of frames. No default.
+    :return: Rescaled frames.
     '''
 
     frames = frames - np.mean(frames, axis=0)  # center (subtract mean from every column)
@@ -812,16 +837,20 @@ def rescale_frames(frames):
 # end function rescale_frames
 
 
-def smooth_evolution(frames, num_new_frames=100, acc_mult=1, verbose=True):
+def smooth_frames(frames, num_new_frames=100, acc_mult=1, verbose=True):
     '''
-    given input frames, interpolate new frames based on a target average speed between frames.
+    Given a 3-D array of frames, interpolate new frames based on a target average speed between frames.
 
-    :param frames: 3-d numpy array
-    :param num_new_frames: number of frames to create in the output. default 100.
-    :param acc_mult: acceleration multiplier. if starting average speed is s, final average speed will be
-        acc_mult * s. acc_mult must be positive. default 1.
-    :param verbose: whether to report progress. default True.
-    :return: new 3-d array of smoothed-evolution frames.
+    This function is useful for highlighting the most interesting parts of a DQM evolution. (A common
+    'problem' is waiting hundreds of frames for the last few points to stop moving.)
+
+    :param frames: 3-D array of frames. No default.
+    :param num_new_frames: Number of frames to create in the output. Default 100.
+    :param acc_mult: Acceleration multiplier. Must be positive. If starting average speed of points (between first
+        2 output frames) is S, final average speed (between last 2 output frames) will be acc_mult * S. Default 1
+        (constant average speed for moving points).
+    :param verbose: Boolean: whether to report progress. Default True.
+    :return: New 3-D array of smoothed-evolution frames.
     '''
 
     assert num_new_frames > 0, "'num_new_frames' must be positive"
@@ -885,5 +914,5 @@ def smooth_evolution(frames, num_new_frames=100, acc_mult=1, verbose=True):
     # end for each new frame (except the first)
 
     return new_frames
-# end function smooth_evolution
+# end function smooth_frames
 

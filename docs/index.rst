@@ -1,27 +1,23 @@
-Welcome to DQM's documentation!
-===================================
+DQM: Dynamic Quantum Mapping
+============================
 
-**DQM** is a (....... Python library for cooks and food lovers
-that creates recipes mixing random ingredients.
-It pulls data from the `Open Food Facts database <https://world.openfoodfacts.org/>`_
-and offers a *simple* and *intuitive* API. .......)
+Dynamic Quantum Mapping (DQM) is a unique, open-source system designed for exploring and understanding the intrinsic structure of high-dimensional numerical data.
 
-Check out the :doc:`usage` section for further information, including
-how to :ref:`installation` the project.
+DQM works on any given data set, using the mathematical framework of quantum mechanics, by creating a high-dimensional data-density map and then moving data points toward nearby regions of higher data density.
 
-.. note::
+No assumptions are made about the underlying structure of the data.
 
-   This project is under active development.
+Visual and numerical analysis of the resulting animated ‘evolution’ of the data can reveal both clusters and extended structures, leading to a rich understanding of relationships between different subsets of the data.
 
 Contents
 --------
 
 .. toctree::
+	:maxdepth: 1
 
-   usage
-   api
+	installation
+	quick_start
+	user_guide
+	api
+	links
 
-Other Section
--------------
-
-More information here.
