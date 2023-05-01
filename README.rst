@@ -12,19 +12,22 @@ Visual and numerical analysis of the resulting animated ‘evolution’ of the d
 Documentation (on Read the Docs)
 --------------------------------
 
+`Documentation Homepage <https://dqm.readthedocs.io/en/latest>`_
+
 * `Installation <https://dqm.readthedocs.io/en/latest/installation.html>`_
 * `Quick Start <https://dqm.readthedocs.io/en/latest/quick_start.html>`_
 * `User Guide <https://dqm.readthedocs.io/en/latest/user_guide.html>`_
 * `API <https://dqm.readthedocs.io/en/latest/api.html>`_
+* `FAQ <https://dqm.readthedocs.io/en/latest/faq.html>`_
 * `Links <https://dqm.readthedocs.io/en/latest/links.html>`_
 
 Getting Involved
 ----------------
 
 * Review the `contributing guidelines <./CONTRIBUTING.md>`_
-* Open or review a `pull request <./pulls>`_ (for contributions and changes to the project)
-* Open or discuss an `issue <./issues>`_ (bug reports and feature requests)
-* Participate in a `discussion <./discussions>`_ (anything other than issues)
+* Open or review a `pull request <https://github.com/zanderteller/dqm/pulls>`_ (for contributions and changes to the project)
+* Open or discuss an `issue <https://github.com/zanderteller/dqm/issues>`_ (for bug reports and feature requests)
+* Create or join a `discussion <https://github.com/zanderteller/dqm/discussions>`_ (for anything other than issues)
 
 Credits
 -------
@@ -41,3 +44,4 @@ License
 
 `MIT License <./LICENSE.txt>`_
 
+|

@@ -1,7 +1,7 @@
 Quick Start
 ===========
 
-This Quick Start guide is best experienced interactively as a Jupyter notebook (under `notebooks/quick_start.ipynb  <https://github.com/zanderteller/dqm/blob/main/notebooks/quick_start.ipynb>`_ in the DQM repository), but the same content is reproduced here.
+This Quick Start guide is best experienced interactively as a Jupyter notebook (`notebooks/quick_start.ipynb  <https://github.com/zanderteller/dqm/blob/main/notebooks/quick_start.ipynb>`_ in the DQM repository), but the same content is reproduced here.
 
 Dynamic Quantum Mapping (DQM) is a unique system designed for exploring and understanding the intrinsic structure of high-dimensional numerical data. DQM works on any given data set by creating a high-dimensional data-density map and then moving data points toward nearby regions of higher data density. No assumptions are made about the underlying structure of the data. Visual and numerical analysis of the resulting animated 'evolution' of the data can reveal both clusters and extended structures, leading to a rich understanding of relationships between different subsets of the data.
 
@@ -190,6 +190,7 @@ Create Frame 0
 The :meth:`create_frame_0 <dqm.DQM.create_frame_0>` method below actually creates the first frame and stores it in the instance.
 
 Creating frame 0 means:
+
 * rotating to the PCA coodinate system
 * Truncating ('projecting') simply by dropping the PCA dimensions that we've chosen not to use.
 
@@ -306,7 +307,7 @@ The :meth:`choose_sigma_for_basis <dqm.DQM.choose_sigma_for_basis>` method below
 Look at Overlap Distribution
 ----------------------------
 
-Look at distribution of overlaps for non-basis rows.
+Look at distribution of basis overlaps for non-basis rows, using the :meth:`build_overlaps <dqm.DQM.build_overlaps>` method. (By default, the method builds basis overlaps for all non-basis rows.)
 
 .. code-block::
 
@@ -337,7 +338,7 @@ The operators depend on the raw data, the choice of basis, and the DQM parameter
 
 *DQM has 3 main parameters: sigma, mass, and step. Mass and step are both for advanced use only; we don't worry about them here.*
 
-See the :doc:`user_guide` and the technical summary *Understanding DQM* for more about the DQM operators.
+See the `User Guide <user_guide.html#building-operators>`_ and the technical summary *Understanding DQM* for more about the DQM operators.
 
 .. code-block::
 
@@ -353,7 +354,7 @@ Build 50 Frames
 
 We're ready to proceed with the DQM evolution.
 
-Let's start by building 50 frames and see what we see.
+Let's start by building 50 frames, using the :meth:`build_frames <dqm.DQM.build_frames>` method, and see what we see.
 
 The animation shows us that the evolution is not done yet at 50 frames, but it's clear that a few points are probably going to be left behind as outliers.
 
@@ -361,7 +362,7 @@ Our next step (below) will be to increase sigma a bit, to get 'clean' formation 
 
 .. code-block::
 
-	dqm.build_frames(50)
+	dqm.build_frames(50)  # default 100
 	print('dqm.frames has shape:', dqm.frames.shape)
 
 	plot_frames(dqm.frames, color=cluster_colors)
@@ -391,7 +392,7 @@ Here's what we need to do:
 
 	dqm.sigma = 2.9
 	dqm.build_operators()
-	dqm.build_frames_auto()
+	dqm.build_frames_auto()  # default batch size 100
 
 	print("shape of 'frames' in the DQM instance is now:", dqm.frames.shape)
 
@@ -466,24 +467,19 @@ Note: for extracting the 4 individual clusters from frame 30, the value for the 
 .. code-block::
 
 	# use frame 30 to extract the 4 individual clusters
-	cluster_manifold_row_nums, cluster_manifold_sizes = extract_manifolds(dqm.frames[:, :, 30], dqm.mean_row_distance / 8)
+	cluster_manifold_row_nums, cluster_manifold_sizes = extract_manifolds(dqm.frames[:, :, 30],
+																		  dqm.mean_row_distance / 8)
 	print('Found these cluster manifold sizes:', cluster_manifold_sizes)
 
 	print()
 
 	# use last frame to extract the 2 superclusters
-	supercluster_manifold_row_nums, supercluster_manifold_sizes = extract_manifolds(dqm.frames[:, :, -1], dqm.mean_row_distance / 1000)
+	supercluster_manifold_row_nums, supercluster_manifold_sizes = extract_manifolds(dqm.frames[:, :, -1],
+																					dqm.mean_row_distance / 1000)
 	print('Found these supercluster manifold sizes:', supercluster_manifold_sizes)
 
 Using 'run_simple'
 ------------------
-
-Here (below) we'll use the :meth:`run_simple <dqm.DQM.run_simple>` method to verify that we can, in a new DQM map, separate the 2 clusters in supercluster 1.
-
-Be aware of the default behavior of :meth:`run_simple <dqm.DQM.run_simple>` (unless you change settings in the instance before you call the method):
-
-* It does a PCA transformation and keeps *all* PCA dimensions.
-* It uses a 'full' basis (all data points are in the basis).
 
 The :meth:`run_simple <dqm.DQM.run_simple>` method is indeed very simple -- in fact, here's the code in its entirety:
 
@@ -497,6 +493,13 @@ The :meth:`run_simple <dqm.DQM.run_simple>` method is indeed very simple -- in f
 		self.build_operators()
 		self.build_frames_auto()
 	# end method run_simple
+
+Here (below) we'll use the :meth:`run_simple <dqm.DQM.run_simple>` method to verify that we can, in a new DQM map, separate the 2 clusters in supercluster 1.
+
+Be aware of the default behavior of :meth:`run_simple <dqm.DQM.run_simple>` (unless you change settings in the instance before you call the method):
+
+* It does a PCA transformation and keeps *all* PCA dimensions.
+* It uses a 'full' basis (all data points are in the basis).
 
 .. code-block::
 
@@ -530,6 +533,6 @@ You've now seen the most important core elements in DQM's operation and some of 
 For more information, see:
 
 * the :doc:`user_guide`
-* the technical summary *Understanding DQM*
-* (the other demo notebook.......???)
+* the technical summary `Understanding DQM <https://github.com/zanderteller/dqm/blob/main/docs/Understanding%20DQM.pdf>`_
 
+|

@@ -21,3 +21,5 @@ Utility Functions
 
 .. automodule:: dqm.utils
    :members:
+
+|

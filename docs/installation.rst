@@ -106,3 +106,5 @@ Once you've cleared those hurdles, compilation from the command line should be s
 	$ make all
 
 To be sure everything worked, check for the compiled library in its final location: ``<your clone main folder>/dqm/bin/dqm_python.dylib``.
+
+|
