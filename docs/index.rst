@@ -19,5 +19,7 @@ Contents
 	quick_start
 	user_guide
 	api
+	faq
 	links
 
+|

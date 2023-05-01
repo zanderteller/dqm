@@ -14,7 +14,7 @@ No assumptions are made about the underlying structure of the data.
 
 Visual and numerical analysis of the resulting animated 'evolution' of the data can reveal both clusters and extended structures, leading to a rich understanding of relationships between different subsets of the data.
 
-Among other uses, DQM can help with understanding how many models are needed for a given data set. (See :ref:`Interpreting Results <Interpreting and Using Results>` below for more on this subject.)
+Among other uses, DQM can help with understanding how many models are needed for a given data set. (See the :ref:`Interpreting Results <Interpreting and Using Results>` section below for more on this subject.)
 
 .. note::
 
@@ -34,7 +34,7 @@ If DQM is working with, say, 20 dimensions, then the motion created by the DQM e
 
 In this sense, DQM is *not* a 3-dimensional embedding, even though the regular use of 3-D plots may seem to suggest otherwise.
 
-(This issue is revisited in the :ref:`PCA Transformations` section below.)
+(This issue is revisited in the :ref:`PCA Transformation` section below.)
 
 Visualization Tools
 ^^^^^^^^^^^^^^^^^^^
@@ -43,7 +43,7 @@ DQM's main visualization tool is the :func:`plot_frames <dqm.utils.plot_frames>`
 
 DQM also has a 'backup' function, :func:`plot_frames_ipv <dqm.utils.plot_frames_ipv>`, which uses the `IPyVolume <https://ipyvolume.readthedocs.io>`_ package. (IPyVolume is less stable/mature than Plotly and may be buggy. However, it may handle large numbers of data points and/or frames much better than Plotly does.)
 
-If you prefer to use your own visualization tools, you can. The core functionality of DQM itself does not rely on the plotting functions above. The final result of a DQM evolution (stored in the ``dqm.frames`` instance variable) is a 3-D array with shape: ``<number of rows/points x number of dimensions x number of frames>``. From there, you can visualize however you wish.
+If you prefer to use your own visualization tools, you can. The core functionality of DQM itself does not rely on the plotting functions above. The final result of a DQM evolution (stored in the ``dqm.frames`` instance variable) is a 3-D array with shape: ``<number of points x number of dimensions x number of frames>``. From there, you can visualize however you wish.
 
 Basic Workflow
 --------------
@@ -67,8 +67,8 @@ For DQM, every data dimension is simply a dimension, like any other, in a Euclid
 
 If it's not what you want, consider normalizing the variance of each dimension in the data, in order to give all dimensions equal 'weight' in DQM. This can be done with something as simple as a z-score of each dimension (subtracting the mean and dividing by the standard deviation).
 
-PCA Transformations
-^^^^^^^^^^^^^^^^^^^
+PCA Transformation
+^^^^^^^^^^^^^^^^^^
 
 (*See the* `Wikipedia PCA page <https://en.wikipedia.org/wiki/Principal_component_analysis>`_ *for background on Principal Component Analysis.*)
 
@@ -94,7 +94,7 @@ If you find that the elbow is farther out than your computing resources will all
 
 **Working with PCA in the** :class:`DQM <dqm.DQM>` **Class**
 
-The following code block (following the example in the :doc:`quick_start` guide) demonstrates choosing a number of PCA dimensions to work with:
+The following code block (following the `Quick Start example <quick_start.html#run-pca>`_) demonstrates choosing a number of PCA dimensions to work with:
 
 .. code-block::
 
@@ -124,7 +124,7 @@ The :meth:`create_frame_0 <dqm.DQM.create_frame_0>` method creates the first 'fr
 	dqm.create_frame_0()
 	print(dqm.frames.shape)
 
-... will print the shape of 'frames', which will be ``<number of rows x number of dimensions x 1>``. Note that 'frames' is 3-D; more frames will be added in the 3rd dimension during evolution.
+... will print the shape of 'frames', which will be ``<number of points x number of dimensions x 1>``. Note that 'frames' is 3-D; more frames will be added in the 3rd dimension during evolution.
 
 If you're using a PCA transformation, the number of dimensions will be determined by the instance's PCA-transformation settings (see above).
 
@@ -132,14 +132,14 @@ If you're not using a PCA transformation, frame 0 will simply be a copy of the r
 
 **Excluding Outliers**
 
-If you haven't dealt with outliers already, now is a good time to check for them, in a visualization of frame 0 (by calling ``plot_frames(dqm.frames)``.)
+If you haven't dealt with outliers already, now is a good time to check for them, in a visualization of frame 0 (by calling ``plot_frames(dqm.frames)``).
 
 Any extreme outliers in your data will cause the DQM map to become a relatively uninteresting illustration of just how different the outliers are from everything else. Thus, you may want to simply exclude them from the data set.
 
 Choosing a Basis
 ^^^^^^^^^^^^^^^^
 
-The 'basis' in DQM is a subset of data points that we choose from the data set. These basis points will be used to represent all other data points and will form the core of all DQM calculations. (*The word 'basis' here is referencing the idea from linear algebra; see the technical summary* *Understanding DQM* *for the technical details.*)
+The 'basis' in DQM is a subset of data points that we choose from the data set. These basis points will be used to represent all other data points and will form the core of all DQM calculations. (*The word 'basis' here is referencing the idea from linear algebra; see the technical summary* `Understanding DQM <https://github.com/zanderteller/dqm/blob/main/docs/Understanding%20DQM.pdf>`_ *for the technical details.*)
 
 The size of the basis (i.e., the number of basis points) sets a 'resolution' for how much detail we can see in the landscape. A large basis is very computationally expensive (building frames is approximately :math:`O(n^3)`), so in order to use DQM efficiently it's a very good idea to follow these guidelines:
 
@@ -167,7 +167,9 @@ For any non-basis point, the 'overlap' of that point in the basis is a measure o
 
 Overlap for a given data point is always between 0 and 1, with 1 being a perfect representation. (All basis points have overlap of 1 in the basis.)
 
-*For full technical details on basis overlaps, see the section on "Reconstruction of Wave Functions in the Eigenbasis" in the technical summary Understanding DQM.*
+By default, the :meth:`build_overlaps <dqm.DQM.build_overlaps>` method buils and returns basis overlaps for all non-basis rows.
+
+*For full technical details on basis overlaps, see the section on "Reconstruction of Wave Functions in the Eigenbasis" in the technical summary* `Understanding DQM <https://github.com/zanderteller/dqm/blob/main/docs/Understanding%20DQM.pdf>`_.
 
 **Low-Overlap Points and Smoothness of Evolution**
 
@@ -215,7 +217,7 @@ As shown in the code block below, the :meth:`choose_sigma_for_basis <dqm.DQM.cho
 
 	print('The DQM instance now has a stored value of sigma:', dqm.sigma)
 
-Note that this method won't work if you're using a 'full' basis (i.e., all data points are in the basis) -- there need to be some non-basis point to work with.
+Note that this method won't work if you're using a 'full' basis (i.e., all data points are in the basis) -- there need to be some non-basis points to work with.
 
 **Mass**
 
@@ -244,8 +246,8 @@ Building Operators
 A quick recap -- once you've:
 
 * Done any preprocessing of your data
-* Chosen whether to use a PCA transformation, and how many PCA dimensions to use (DQM will default to using all PCA dimensions)
-* Chosen a basis (DQM will default to a 'full' basis, using all data points)
+* Chosen whether to use a PCA transformation, and how many PCA dimensions to use (DQM uses all PCA dimensions by default)
+* Chosen a basis (DQM uses a 'full' basis, using all data points, by default)
 * Chosen a value of sigma
 
 ... then you're ready to build the DQM operators, which will be used during evolution.
@@ -258,7 +260,7 @@ This step itself is extremely simple:
 
 That's it. The operators are now stored in the instance, and you'll never need to touch them or change them. (*Note: this step can be slow for large data sets, especially when using a large basis.*)
 
-If you want the gory mathematical details, see the technical summary *Understanding DQM*.
+If you want the gory mathematical details, see the section on "Building the Quantum Operators" in the technical summary `Understanding DQM <https://github.com/zanderteller/dqm/blob/main/docs/Understanding%20DQM.pdf>`_.
 
 Here, we'll just give an extremely brief description of each operator:
 
@@ -269,21 +271,21 @@ Here, we'll just give an extremely brief description of each operator:
 Building Frames
 ^^^^^^^^^^^^^^^
 
-Once we've built the operatorWe're now ready to proceed with the DQM evolution.
+We're now ready to proceed with the DQM evolution.
 
 The :meth:`build_frames <dqm.DQM.build_frames>` method will build a specified number of frames (100 by default):
 
 .. code-block::
 
 	# build and add 50 new frames to the 'frames' instance variable
-	dqm.build_frames(50)
+	dqm.build_frames(50)  # default 100
 
 The :meth:`build_frames_auto <dqm.DQM.build_frames_auto>` method will call :meth:`build_frames <dqm.DQM.build_frames>` repeatedly (in batches of 100 by default) until all points have stopped moving:
 
 .. code-block::
 
 	# build and add new frames, in batches of 50, until all points stop moving
-	dqm.build_frames_auto(50)
+	dqm.build_frames_auto(50)  # default batch size 100
 
 :meth:`build_frames_auto <dqm.DQM.build_frames_auto>` uses the ``dqm.stopping_threshold`` parameter to decide when a point has stopped moving. A point is considered to have stopped if it moves less then ``stopping_threshold`` distance from one frame to the next. ``stopping_threshold`` is set automatically to ``dqm.mean_row_distance / 1e6`` but can be adjusted manually.
 
@@ -347,3 +349,4 @@ Is DQM a Form of Machine Learning?
 
 Coming soon...
 
+|
