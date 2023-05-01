@@ -750,57 +750,75 @@ class DQM:
     # end method build_overlaps
 
 
-    def estimate_mean_row_distance(self, rel_err_threshold=0.01, max_n=int(1e4), rand_seed=500):
+    def estimate_mean_row_distance(self, rel_err_threshold=0.01, rand_seed=500):
         '''
-        estimate the mean distance between rows in frame 0 (self.frames must exist as an ndarray).
+        Estimate the mean pairwise distance between rows in frame 0. (self.frames must exist.)
 
-        use a successively larger number of row pairs to estimate the overall mean distance, until the
-        'relative error' (standard error of the mean divided by the mean) drops below the given threshold.
+        Use a successively larger number of row pairs to estimate the overall mean distance, until the
+        'relative error' (standard error of the mean divided by the mean) drops below rel_err_threshold.
 
-        estimated mean distance between rows is stored in self.mean_row_distance
+        The final result is stored in self.mean_row_distance.
 
-        :param rel_err_threshold: threshold for 'relative error' (standard error of mean divided by mean).
-            default 0.01.
-        :param max_n: maximum number of distances to test (also limited to half the total number of rows
-            in frame 0). default 10,000.
-        :param rand_seed: random seed for choosing row pairs for distance calculations. default 500.
+        :param rel_err_threshold: Threshold for 'relative error' (standard error of mean divided by mean).
+            Must be positive. Default 0.01.
+        :param rand_seed: Random seed for choosing row pairs for distance calculations. Default 500.
         :return: None
         '''
 
         assert type(self.frames) is np.ndarray, 'frame 0 must exist to estimate mean distance between rows'
+        assert rel_err_threshold > 0, f"'rel_err_threshold must be positive', is currently {rel_err_threshold}"
 
         rows = self.frames[:, :, 0]
-
         num_rows = rows.shape[0]
-        row_nums = np.array(list(range(num_rows)))
 
         rng = np.random.default_rng(rand_seed)
-        max_n = min(max_n, floor(num_rows / 2))
-        n = min(100, max_n)
+        shuffled_row_nums = rng.permutation(num_rows)
+
+        # dists array will grow as needed (see below)
+        dists_array_size = num_rows
+        dists = np.zeros(dists_array_size)
 
         done = False
+        row_idx1 = 0
+        row_idx2 = 1
+        num_pairs = 0
         while not done:
-            row_pairs = rng.choice(row_nums, size=(n, 2), replace=False)
-            dists = np.array([np.linalg.norm(rows[i, :] - rows[j, :]) for (i, j) in row_pairs])
-            mu = np.mean(dists)
-            report_precision = floor(log10(mu)) - 2
+            # calculate store row-pair distance
+            num_pairs += 1
+            dists[num_pairs - 1] = np.linalg.norm(rows[shuffled_row_nums[row_idx1], :] -
+                                                  rows[shuffled_row_nums[row_idx2], :])
 
-            # 'relative error' is standard error of the mean divided by the mean
-            rel_err = np.std(dists) / n ** 0.5 / mu
+            # update row-pair indices
+            row_idx2 += 1
+            if row_idx2 == num_rows:
+                row_idx1 += 1
+                if row_idx1 == num_rows - 1:
+                    break  # we've run out of row pairs
+                else:
+                    row_idx2 = row_idx1 + 1
+            # end if reached the end of the shuffled list of rows for row_idx2
 
-            done = rel_err <= rel_err_threshold
+            # calculate current relative error
+            if num_pairs > 1:
+                mu = np.mean(dists[:num_pairs])
+                std = np.std(dists[:num_pairs])
+                rel_err = std / np.sqrt(num_pairs) / mu
+                done = rel_err <= rel_err_threshold
+            # end if have multiple row-pair distances for calculations
 
-            if not done:
-                n = round(n * 1.5)
-                if n > max_n:
-                    break
-                # end if n too big
-            # end if not done
-        # end while not done (relative error too big and still have more rows left)
+            if num_pairs == dists.size and not done:
+                # grow dists array as needed
+                dists_array_size += num_rows
+                new_dists = np.zeros(dists_array_size)
+                new_dists[:num_pairs] = dists
+                dists = new_dists
+            # end if growing dists array
+        # end while not done
 
         if self.verbose:
-            print('estimated mean distance between rows is {:.{}f} (relative error {:.1f}%)'.
-                  format(mu, max(0, -report_precision), 100 * rel_err))
+            report_precision = floor(log10(mu)) - 2
+            print('estimated mean distance between rows is {:.{}f} (relative error {:.1f}%, from {:,} row pairs)'.
+                  format(mu, max(0, -report_precision), 100 * rel_err, num_pairs))
 
         self.mean_row_distance = mu
 
