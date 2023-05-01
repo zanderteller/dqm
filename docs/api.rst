@@ -7,8 +7,8 @@ Everything can be imported directly from the package. Examples:
 
 .. code:: python3
 
-	from dqm import DQM
-	from dqm import plot_frames, extract_manifolds
+   from dqm import DQM
+   from dqm import plot_frames, extract_manifolds
 
 DQM Class
 ---------

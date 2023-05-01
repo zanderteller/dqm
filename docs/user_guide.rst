@@ -18,7 +18,7 @@ Among other uses, DQM can help with understanding how many models are needed for
 
 .. note::
 
-	In code examples throughout this guide, we'll refer to an instance of the :class:`DQM <dqm.DQM>` class that we'll call 'dqm', created with the default constructor: ``dqm = DQM()``.
+   In code examples throughout this guide, we'll refer to an instance of the :class:`DQM <dqm.DQM>` class that we'll call 'dqm', created with the default constructor: ``dqm = DQM()``.
 
 Visualization
 -------------
@@ -98,21 +98,21 @@ The following code block (following the `Quick Start example <quick_start.html#r
 
 .. code-block::
 
-	dqm.verbose = True  # default True
-	
-	# run PCA, store results in instance, and display plots with PCA info
-	dqm.run_pca()
+    dqm.verbose = True  # default True
 
-	# choose an explicit number of dimensions (takes precedence if not None)
-	# dqm.pca_num_dims = 18
-	# OR...
-	# choose a minimum proportion of total cumulative variance for the PCA dimensions to be used
-	dqm.pca_var_threshold = 0.98
+    # run PCA, store results in instance, and display plots with PCA info
+    dqm.run_pca()
 
-	dqm.pca_transform = True  # default True (if false, frame 0 will be a copy of the raw data)
-	dqm.create_frame_0()
+    # choose an explicit number of dimensions (takes precedence if not None)
+    # dqm.pca_num_dims = 18
+    # OR...
+    # choose a minimum proportion of total cumulative variance for the PCA dimensions to be used
+    dqm.pca_var_threshold = 0.98
 
-	print("In the DQM instance, 'frames' (which now stores frame 0) has shape:", dqm.frames.shape)
+    dqm.pca_transform = True  # default True (if false, frame 0 will be a copy of the raw data)
+    dqm.create_frame_0()
+
+    print("In the DQM instance, 'frames' (which now stores frame 0) has shape:", dqm.frames.shape)
 
 Creating Frame 0
 ^^^^^^^^^^^^^^^^
@@ -121,8 +121,8 @@ The :meth:`create_frame_0 <dqm.DQM.create_frame_0>` method creates the first 'fr
 
 .. code-block::
 
-	dqm.create_frame_0()
-	print(dqm.frames.shape)
+    dqm.create_frame_0()
+    print(dqm.frames.shape)
 
 ... will print the shape of 'frames', which will be ``<number of points x number of dimensions x 1>``. Note that 'frames' is 3-D; more frames will be added in the 3rd dimension during evolution.
 
@@ -156,8 +156,8 @@ The following code will choose a basis of size 100:
 
 .. code-block::
 
-	dqm.basis_size = 100
-	dqm.choose_basis_by_distance()
+    dqm.basis_size = 100
+    dqm.choose_basis_by_distance()
 	
 Choosing the basis by distance means that the method is choosing the basis points to be as far away from each other as possible in the data space. (See :meth:`choose_basis_by_distance <dqm.DQM.choose_basis_by_distance>` for details.)
 
@@ -210,12 +210,12 @@ As shown in the code block below, the :meth:`choose_sigma_for_basis <dqm.DQM.cho
 
 .. code-block::
 
-	dqm.overlap_min_threshold = 0.5  # default 0.5
-	dqm.overlap_mean_threshold = 0.9  # default 0.9
+    dqm.overlap_min_threshold = 0.5  # default 0.5
+    dqm.overlap_mean_threshold = 0.9  # default 0.9
 
-	dqm.choose_sigma_for_basis()
+    dqm.choose_sigma_for_basis()
 
-	print('The DQM instance now has a stored value of sigma:', dqm.sigma)
+    print('The DQM instance now has a stored value of sigma:', dqm.sigma)
 
 Note that this method won't work if you're using a 'full' basis (i.e., all data points are in the basis) -- there need to be some non-basis points to work with.
 
@@ -256,7 +256,7 @@ This step itself is extremely simple:
 
 .. code-block::
 
-	dqm.build_operators()
+    dqm.build_operators()
 
 That's it. The operators are now stored in the instance, and you'll never need to touch them or change them. (*Note: this step can be slow for large data sets, especially when using a large basis.*)
 
@@ -277,15 +277,15 @@ The :meth:`build_frames <dqm.DQM.build_frames>` method will build a specified nu
 
 .. code-block::
 
-	# build and add 50 new frames to the 'frames' instance variable
-	dqm.build_frames(50)  # default 100
+    # build and add 50 new frames to the 'frames' instance variable
+    dqm.build_frames(50)  # default 100
 
 The :meth:`build_frames_auto <dqm.DQM.build_frames_auto>` method will call :meth:`build_frames <dqm.DQM.build_frames>` repeatedly (in batches of 100 by default) until all points have stopped moving:
 
 .. code-block::
 
-	# build and add new frames, in batches of 50, until all points stop moving
-	dqm.build_frames_auto(50)  # default batch size 100
+    # build and add new frames, in batches of 50, until all points stop moving
+    dqm.build_frames_auto(50)  # default batch size 100
 
 :meth:`build_frames_auto <dqm.DQM.build_frames_auto>` uses the ``dqm.stopping_threshold`` parameter to decide when a point has stopped moving. A point is considered to have stopped if it moves less then ``stopping_threshold`` distance from one frame to the next. ``stopping_threshold`` is set automatically to ``dqm.mean_row_distance / 1e6`` but can be adjusted manually.
 

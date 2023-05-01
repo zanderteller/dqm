@@ -3,7 +3,7 @@ Links
 
 .. note::
 
-	Dynamic Quantum Mapping (DQM) was originally known as Dynamic Quantum Clustering (DQC).
+   Dynamic Quantum Mapping (DQM) was originally known as Dynamic Quantum Clustering (DQC).
 
 DQM Technical Summary
 ---------------------

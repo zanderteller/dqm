@@ -14,11 +14,11 @@ First, make sure the 'dqm' package is in your PYTHONPATH. If it isn't already, y
 
 .. code-block::
 
-	# Note: you need the parent folder of the Python 'dqm' folder in the PYTHONPATH.
-	# The 'dqm_repository' folder below is the outer folder, containing the README file, etc.
+    # Note: you need the parent folder of the Python 'dqm' folder in the PYTHONPATH.
+    # The 'dqm_repository' folder below is the outer folder, containing the README file, etc.
 
-	#import os, sys
-	#sys.path.append(os.path.join(os.path.expanduser('~'), 'dqm_repository'))
+    #import os, sys
+    #sys.path.append(os.path.join(os.path.expanduser('~'), 'dqm_repository'))
 
 Imports
 -------
@@ -27,11 +27,11 @@ Import what we need.
 
 .. code-block::
 
-	import numpy as np
-	from dqm import DQM, plot_frames, smooth_frames, extract_manifolds
+    import numpy as np
+    from dqm import DQM, plot_frames, smooth_frames, extract_manifolds
 
-	# import PyPlot for some basic plotting
-   	import matplotlib.pyplot as plt
+    # import PyPlot for some basic plotting
+    import matplotlib.pyplot as plt
 
 Create Example Data Set
 -----------------------
@@ -42,61 +42,61 @@ There will be 4 spherical clusters of 100 points each, grouped as pairs in 2 'su
 
 .. code-block::
 
-	def random_points_in_sphere(num_points, num_dims, radius, rand_seed=0):
-    	# generate random points within a high-dimensional sphere
-		rng = np.random.default_rng(rand_seed)
-		points = rng.uniform(low=-1, high=1, size=(num_points, num_dims))
-		# for each point, pick a random value between 0 and radius, skewed toward the maximum value (radius)
-		for row_idx in range(num_points):
-        	r = radius * (rng.random() ** 0.5)
-			row = points[row_idx, :]
-			points[row_idx, :] = r * row / np.linalg.norm(row)  # normalize the row, then multiply by r
-		# end for each point/row
-		return points
-	# end function random_points_in_sphere
+    def random_points_in_sphere(num_points, num_dims, radius, rand_seed=0):
+        # generate random points within a high-dimensional sphere
+        rng = np.random.default_rng(rand_seed)
+        points = rng.uniform(low=-1, high=1, size=(num_points, num_dims))
+        # for each point, pick a random value between 0 and radius, skewed toward the maximum value (radius)
+        for row_idx in range(num_points):
+            r = radius * (rng.random() ** 0.5)
+            row = points[row_idx, :]
+            points[row_idx, :] = r * row / np.linalg.norm(row)  # normalize the row, then multiply by r
+        # end for each point/row
+        return points
+    # end function random_points_in_sphere
 
-	### build the data set
+    ### build the data set
 
-	# set parameters
-	num_points_per_cluster = 100
-	num_dims = 20
-	cluster_radius= 4
-	super_sep = 8  # separation between superclusters
-	sub_sep = 5  # separation of clusters within superclusters
+    # set parameters
+    num_points_per_cluster = 100
+    num_dims = 20
+    cluster_radius= 4
+    super_sep = 8  # separation between superclusters
+    sub_sep = 5  # separation of clusters within superclusters
 
-	# create 4 spherical clusters
-	cluster0 = random_points_in_sphere(num_points_per_cluster, num_dims, cluster_radius, rand_seed=0)
-	cluster1 = random_points_in_sphere(num_points_per_cluster, num_dims, cluster_radius, rand_seed=1)
-	cluster2 = random_points_in_sphere(num_points_per_cluster, num_dims, cluster_radius, rand_seed=2)
-	cluster3 = random_points_in_sphere(num_points_per_cluster, num_dims, cluster_radius, rand_seed=3)
+    # create 4 spherical clusters
+    cluster0 = random_points_in_sphere(num_points_per_cluster, num_dims, cluster_radius, rand_seed=0)
+    cluster1 = random_points_in_sphere(num_points_per_cluster, num_dims, cluster_radius, rand_seed=1)
+    cluster2 = random_points_in_sphere(num_points_per_cluster, num_dims, cluster_radius, rand_seed=2)
+    cluster3 = random_points_in_sphere(num_points_per_cluster, num_dims, cluster_radius, rand_seed=3)
 
-	rng = np.random.default_rng(17)
+    rng = np.random.default_rng(17)
 
-	# create 2 superclusters by pushing clusters 0 and 1 in a random direction away from the origin and
-	# pushing clusters 2 and 3 in the opposite direction
-	dir = rng.uniform(low=-1, high=1, size=num_dims)
-	dir /= np.linalg.norm(dir)  # normalize
-	cluster0 += dir * super_sep / 2
-	cluster1 += dir * super_sep / 2
-	cluster2 -= dir * super_sep / 2
-	cluster3 -= dir * super_sep / 2
+    # create 2 superclusters by pushing clusters 0 and 1 in a random direction away from the origin and
+    # pushing clusters 2 and 3 in the opposite direction
+    dir = rng.uniform(low=-1, high=1, size=num_dims)
+    dir /= np.linalg.norm(dir)  # normalize
+    cluster0 += dir * super_sep / 2
+    cluster1 += dir * super_sep / 2
+    cluster2 -= dir * super_sep / 2
+    cluster3 -= dir * super_sep / 2
 
-	# separate clusters within 1st supercluster
-	dir = rng.uniform(low=-1, high=1, size=num_dims)
-	dir /= np.linalg.norm(dir)  # normalize
-	cluster0 += dir * sub_sep / 2
-	cluster1 -= dir * sub_sep / 2
-	# separate clusters within 2nd supercluster
-	dir = rng.uniform(low=-1, high=1, size=num_dims)
-	dir /= np.linalg.norm(dir)  # normalize
-	cluster2 += dir * sub_sep / 2
-	cluster3 -= dir * sub_sep / 2
+    # separate clusters within 1st supercluster
+    dir = rng.uniform(low=-1, high=1, size=num_dims)
+    dir /= np.linalg.norm(dir)  # normalize
+    cluster0 += dir * sub_sep / 2
+    cluster1 -= dir * sub_sep / 2
+    # separate clusters within 2nd supercluster
+    dir = rng.uniform(low=-1, high=1, size=num_dims)
+    dir /= np.linalg.norm(dir)  # normalize
+    cluster2 += dir * sub_sep / 2
+    cluster3 -= dir * sub_sep / 2
 
-	# create the data set by catting all clusters together into single matrix
-	dat = np.concatenate((cluster0, cluster1, cluster2, cluster3), axis=0)
+    # create the data set by catting all clusters together into single matrix
+    dat = np.concatenate((cluster0, cluster1, cluster2, cluster3), axis=0)
 
-	num_rows, num_cols = dat.shape
-	print(f'Raw data has {num_rows} rows (points) and {num_cols} columns (dimensions)')
+    num_rows, num_cols = dat.shape
+    print(f'Raw data has {num_rows} rows (points) and {num_cols} columns (dimensions)')
 
 Create Cluster Color Scheme
 ---------------------------
@@ -111,18 +111,18 @@ The plot is interactive -- click and drag to rotate.
 
 .. code-block::
 
-	# create cluster color scheme
-	cluster_colors = np.zeros((num_rows, 3))
-	cluster_colors[:num_points_per_cluster, :] = np.array([1, 0, 0])  # cluster 0 is red
-	cluster_colors[num_points_per_cluster:2*num_points_per_cluster, :] = np.array([0, 1, 0])  # cluster 1 is green
-	cluster_colors[2*num_points_per_cluster:3*num_points_per_cluster, :] = np.array([0, 0, 1])  # cluster 2 is blue
-	cluster_colors[3*num_points_per_cluster:4*num_points_per_cluster, :] = np.array([0.7, 0.7, 0.7])  # cluster 3 is gray
+    # create cluster color scheme
+    cluster_colors = np.zeros((num_rows, 3))
+    cluster_colors[:num_points_per_cluster, :] = np.array([1, 0, 0])  # cluster 0 is red
+    cluster_colors[num_points_per_cluster:2*num_points_per_cluster, :] = np.array([0, 1, 0])  # cluster 1 is green
+    cluster_colors[2*num_points_per_cluster:3*num_points_per_cluster, :] = np.array([0, 0, 1])  # cluster 2 is blue
+    cluster_colors[3*num_points_per_cluster:4*num_points_per_cluster, :] = np.array([0.7, 0.7, 0.7])  # cluster 3 is gray
 
-	# plot the first 3 columns of 'dat'
-	plot_frames(dat, color=cluster_colors)
+    # plot the first 3 columns of 'dat'
+    plot_frames(dat, color=cluster_colors)
 
 .. image:: images/quick_start_first_3_raw_dims.png
-	:align: center
+   :align: center
 
 Create DQM Instance
 -------------------
@@ -131,11 +131,11 @@ Create a DQM instance and store the raw data.
 
 .. code-block::
 
-	dqm = DQM()
-	dqm.verbose = True  # default True
-	dqm.raw_data = dat
+    dqm = DQM()
+    dqm.verbose = True  # default True
+    dqm.raw_data = dat
 
-	print('Raw data stored in DQM instance has shape:', dqm.raw_data.shape)
+    print('Raw data stored in DQM instance has shape:', dqm.raw_data.shape)
 
 Run PCA
 -------
@@ -159,10 +159,10 @@ Understanding the plots (left to right):
 
 .. code-block::
 
-	dqm.run_pca()
+    dqm.run_pca()
 
 .. image:: images/quick_start_run_pca_plots.png
-	:align: center
+   :align: center
 
 Choose Number of PCA Dimensions
 -------------------------------
@@ -178,11 +178,11 @@ Here (below), we use ``pca_var_threshold``. The instance reports that the thresh
 
 .. code-block::
 
-	# choose an explicit number of dimensions (takes precedence if not None)
-	# dqm.pca_num_dims = 18
-	# OR...
-	# choose a minimum proportion of total cumulative variance for the PCA dimensions to be used
-	dqm.pca_var_threshold = 0.98
+    # choose an explicit number of dimensions (takes precedence if not None)
+    # dqm.pca_num_dims = 18
+    # OR...
+    # choose a minimum proportion of total cumulative variance for the PCA dimensions to be used
+    dqm.pca_var_threshold = 0.98
 
 Create Frame 0
 --------------
@@ -198,10 +198,10 @@ Creating frame 0 means:
 
 .. code-block::
 
-	dqm.pca_transform = True  # default True (if false, frame 0 will be a copy of the raw data)
-	dqm.create_frame_0()
+    dqm.pca_transform = True  # default True (if false, frame 0 will be a copy of the raw data)
+    dqm.create_frame_0()
 
-	print("In the DQM instance, 'frames' (which now stores frame 0) has shape:", dqm.frames.shape)
+    print("In the DQM instance, 'frames' (which now stores frame 0) has shape:", dqm.frames.shape)
 
 Plot Frame 0
 ------------
@@ -210,10 +210,10 @@ In this plot the first 3 dimensions are now PCA dimensions, not raw dimensions, 
 
 .. code-block::
 
-	plot_frames(dqm.frames, color=cluster_colors)
+    plot_frames(dqm.frames, color=cluster_colors)
 
 .. image:: images/quick_start_first_3_pca_dims.png
-	:align: center
+   :align: center
 
 Choose a Basis
 --------------
@@ -235,12 +235,12 @@ The :meth:`choose_basis_by_distance <dqm.DQM.choose_basis_by_distance>` method b
 
 .. code-block::
 
-	basis_size = round(num_rows / 4)
-	print(f'Using a basis size of {basis_size}')
-	print()
+    basis_size = round(num_rows / 4)
+    print(f'Using a basis size of {basis_size}')
+    print()
 
-	dqm.basis_size = basis_size
-	dqm.choose_basis_by_distance()
+    dqm.basis_size = basis_size
+    dqm.choose_basis_by_distance()
 
 Plot Frame 0 Again
 ------------------
@@ -249,16 +249,16 @@ Plot frame 0 again, this time highlighting the basis rows in orange.
 
 .. code-block::
 
-	basis_colors = 0.8 * np.ones((num_rows, 3))  # light gray
-	basis_colors[dqm.basis_row_nums, :] = np.array([1, 0.6, 0])  # basis rows in orange
+    basis_colors = 0.8 * np.ones((num_rows, 3))  # light gray
+    basis_colors[dqm.basis_row_nums, :] = np.array([1, 0.6, 0])  # basis rows in orange
 
-	basis_sizes = 7 * np.ones(num_rows)
-	basis_sizes[dqm.basis_row_nums] = 10  # make basis-row points bigger
+    basis_sizes = 7 * np.ones(num_rows)
+    basis_sizes[dqm.basis_row_nums] = 10  # make basis-row points bigger
 
-	plot_frames(dqm.frames, color=basis_colors, size=basis_sizes)
+    plot_frames(dqm.frames, color=basis_colors, size=basis_sizes)
 
 .. image:: images/quick_start_first_3_pca_dims_basis_rows.png
-	:align: center
+   :align: center
 
 Choose Minimum Good Sigma
 -------------------------
@@ -296,13 +296,13 @@ The :meth:`choose_sigma_for_basis <dqm.DQM.choose_sigma_for_basis>` method below
 
 .. code-block::
 
-	dqm.overlap_min_threshold = 0.5  # default 0.5
-	dqm.overlap_mean_threshold = 0.9  # default 0.9
+    dqm.overlap_min_threshold = 0.5  # default 0.5
+    dqm.overlap_mean_threshold = 0.9  # default 0.9
 
-	dqm.choose_sigma_for_basis()
+    dqm.choose_sigma_for_basis()
 
-	print()
-	print('The DQM instance now has a stored value of sigma:', dqm.sigma)
+    print()
+    print('The DQM instance now has a stored value of sigma:', dqm.sigma)
 
 Look at Overlap Distribution
 ----------------------------
@@ -311,21 +311,21 @@ Look at distribution of basis overlaps for non-basis rows, using the :meth:`buil
 
 .. code-block::
 
-	# by default, the 'build_overlaps' method builds overlaps for all non-basis points in the raw data
-	overlaps = dqm.build_overlaps()
+    # by default, the 'build_overlaps' method builds overlaps for all non-basis points in the raw data
+    overlaps = dqm.build_overlaps()
 
-	print('for sigma {:.4f}, non-basis overlaps have min {:.3f}, mean {:.3f}, median {:.3f}, max {:.3f}'.\
-			format(dqm.sigma, np.min(overlaps), np.mean(overlaps), np.median(overlaps), np.max(overlaps)))
-	print()
+    print('for sigma {:.4f}, non-basis overlaps have min {:.3f}, mean {:.3f}, median {:.3f}, max {:.3f}'.\
+            format(dqm.sigma, np.min(overlaps), np.mean(overlaps), np.median(overlaps), np.max(overlaps)))
+    print()
 
-	plt.hist(overlaps, bins=50)
-	plt.xlabel('overlap')
-	plt.ylabel('count')
-	plt.title('Histogram of Basis Overlaps for Non-Basis Points')
-	plt.show()
+    plt.hist(overlaps, bins=50)
+    plt.xlabel('overlap')
+    plt.ylabel('count')
+    plt.title('Histogram of Basis Overlaps for Non-Basis Points')
+    plt.show()
 
 .. image:: images/quick_start_overlap_histogram.png
-	:align: center
+   :align: center
 
 Build Operators
 ---------------
@@ -342,12 +342,12 @@ See the `User Guide <user_guide.html#building-operators>`_ and the technical sum
 
 .. code-block::
 
-	dqm.build_operators()
+    dqm.build_operators()
 
-	print()
-	print("The 'similarity' matrix (for converstion of state vectors from raw basis to eigenbasis) has shape:", dqm.simt.shape)
-	print("The position-expectation operator tensor has shape:", dqm.xops.shape)
-	print("The evolution operator has shape:", dqm.exph.shape)
+    print()
+    print("The 'similarity' matrix (for converstion of state vectors from raw basis to eigenbasis) has shape:", dqm.simt.shape)
+    print("The position-expectation operator tensor has shape:", dqm.xops.shape)
+    print("The evolution operator has shape:", dqm.exph.shape)
 
 Build 50 Frames
 ---------------
@@ -362,13 +362,13 @@ Our next step (below) will be to increase sigma a bit, to get 'clean' formation 
 
 .. code-block::
 
-	dqm.build_frames(50)  # default 100
-	print('dqm.frames has shape:', dqm.frames.shape)
+    dqm.build_frames(50)  # default 100
+    print('dqm.frames has shape:', dqm.frames.shape)
 
-	plot_frames(dqm.frames, color=cluster_colors)
+    plot_frames(dqm.frames, color=cluster_colors)
 
 .. image:: images/quick_start_sigma2p5_frame50.png
-	:align: center
+   :align: center
 
 Show Formation of 4 Clusters
 ----------------------------
@@ -386,20 +386,20 @@ Here's what we need to do:
 
 .. code-block::
 
-	dqm.verbose = False  # make output a little cleaner
+    dqm.verbose = False  # make output a little cleaner
 
-	dqm.clear_frames()  # this keeps frame 0 by default
+    dqm.clear_frames()  # this keeps frame 0 by default
 
-	dqm.sigma = 2.9
-	dqm.build_operators()
-	dqm.build_frames_auto()  # default batch size 100
+    dqm.sigma = 2.9
+    dqm.build_operators()
+    dqm.build_frames_auto()  # default batch size 100
 
-	print("shape of 'frames' in the DQM instance is now:", dqm.frames.shape)
+    print("shape of 'frames' in the DQM instance is now:", dqm.frames.shape)
 
-	plot_frames(dqm.frames, color=cluster_colors)
+    plot_frames(dqm.frames, color=cluster_colors)
 
 .. image:: images/quick_start_sigma2p9_frame60.png
-	:align: center
+   :align: center
 
 Show Formation of 2 Superclusters
 ---------------------------------
@@ -417,23 +417,23 @@ These observations are just a first taste of how the DQM evolution (not just the
 
 .. code-block::
 
-	dqm.verbose = False  # make output a little cleaner
+    dqm.verbose = False  # make output a little cleaner
 
-	dqm.clear_frames()
+    dqm.clear_frames()
 
-	dqm.sigma = 3.9
-	dqm.build_operators()
-	dqm.build_frames_auto()
+    dqm.sigma = 3.9
+    dqm.build_operators()
+    dqm.build_frames_auto()
 
-	print("shape of 'frames' in the DQM instance is now:", dqm.frames.shape)
-	print()
+    print("shape of 'frames' in the DQM instance is now:", dqm.frames.shape)
+    print()
 
-	# Note: the 'skip_frames=3' argument means only every 3rd frame is plotted. When dealing
-	# with a large number of frames, this can keep the plotting routine from getting too slow.
-	plot_frames(dqm.frames, color=cluster_colors, skip_frames=3)
+    # Note: the 'skip_frames=3' argument means only every 3rd frame is plotted. When dealing
+    # with a large number of frames, this can keep the plotting routine from getting too slow.
+    plot_frames(dqm.frames, color=cluster_colors, skip_frames=3)
 
 .. image:: images/quick_start_sigma3p9_frame30.png
-	:align: center
+   :align: center
 
 Smoothing Frames
 ----------------
@@ -447,10 +447,10 @@ This is not a horrible state of affairs, but DQM does provide 2 fixes for this p
 
 .. code-block::
 
-	plot_frames(smooth_frames(dqm.frames), color=cluster_colors)
+    plot_frames(smooth_frames(dqm.frames), color=cluster_colors)
 
 .. image:: images/quick_start_sigma3p9_smoothedframe60.png
-	:align: center
+   :align: center
 
 Using 'extract_manifolds'
 -------------------------
@@ -466,17 +466,17 @@ Note: for extracting the 4 individual clusters from frame 30, the value for the 
 
 .. code-block::
 
-	# use frame 30 to extract the 4 individual clusters
-	cluster_manifold_row_nums, cluster_manifold_sizes = extract_manifolds(dqm.frames[:, :, 30],
-																		  dqm.mean_row_distance / 8)
-	print('Found these cluster manifold sizes:', cluster_manifold_sizes)
+    # use frame 30 to extract the 4 individual clusters
+    cluster_manifold_row_nums, cluster_manifold_sizes = extract_manifolds(dqm.frames[:, :, 30],
+                                                                          dqm.mean_row_distance / 8)
+    print('Found these cluster manifold sizes:', cluster_manifold_sizes)
 
-	print()
+    print()
 
-	# use last frame to extract the 2 superclusters
-	supercluster_manifold_row_nums, supercluster_manifold_sizes = extract_manifolds(dqm.frames[:, :, -1],
-																					dqm.mean_row_distance / 1000)
-	print('Found these supercluster manifold sizes:', supercluster_manifold_sizes)
+    # use last frame to extract the 2 superclusters
+    supercluster_manifold_row_nums, supercluster_manifold_sizes = extract_manifolds(dqm.frames[:, :, -1],
+                                                                                    dqm.mean_row_distance / 1000)
+    print('Found these supercluster manifold sizes:', supercluster_manifold_sizes)
 
 Using 'run_simple'
 ------------------
@@ -485,14 +485,14 @@ The :meth:`run_simple <dqm.DQM.run_simple>` method is indeed very simple -- in f
 
 .. code-block::
 
-	def run_simple(self, dat_raw, sigma):
-		self.raw_data = dat_raw
-		self.sigma = sigma
+    def run_simple(self, dat_raw, sigma):
+        self.raw_data = dat_raw
+        self.sigma = sigma
 
-		self.create_frame_0()
-		self.build_operators()
-		self.build_frames_auto()
-	# end method run_simple
+        self.create_frame_0()
+        self.build_operators()
+        self.build_frames_auto()
+    # end method run_simple
 
 Here (below) we'll use the :meth:`run_simple <dqm.DQM.run_simple>` method to verify that we can, in a new DQM map, separate the 2 clusters in supercluster 1.
 
@@ -503,32 +503,30 @@ Be aware of the default behavior of :meth:`run_simple <dqm.DQM.run_simple>` (unl
 
 .. code-block::
 
-	# get row numbers for the first supercluster
-	row_nums = supercluster_manifold_row_nums[0]
+    # get row numbers for the first supercluster
+    row_nums = supercluster_manifold_row_nums[0]
 
-	# subselect data and color matrices
-	sc1_dat = dat[row_nums, :]
-	sc1_cluster_colors = cluster_colors[row_nums, :]
+    # subselect data and color matrices
+    sc1_dat = dat[row_nums, :]
+    sc1_cluster_colors = cluster_colors[row_nums, :]
 
-	# build a new DQM map, just for supercluster 1, setting sigma to separate the individual clusters
-	sc1_dqm = DQM()
-	sc1_dqm.verbose = False
-	sc1_dqm.run_simple(sc1_dat, sigma=2)
+    # build a new DQM map, just for supercluster 1, setting sigma to separate the individual clusters
+    sc1_dqm = DQM()
+    sc1_dqm.verbose = False
+    sc1_dqm.run_simple(sc1_dat, sigma=2)
 
-	print('sc1_dqm.frames has shape:', sc1_dqm.frames.shape)
-	print()
+    print('sc1_dqm.frames has shape:', sc1_dqm.frames.shape)
+    print()
 
-	plot_frames(sc1_dqm.frames, color=sc1_cluster_colors)
+    plot_frames(sc1_dqm.frames, color=sc1_cluster_colors)
 
 .. image:: images/quick_start_sc1_sigma2p0_frame20.png
-	:align: center
+   :align: center
 
 Further Reading
 ---------------
 
 You've now seen the most important core elements in DQM's operation and some of the key aspects of interpreting DQM results. Go forth and explore!
-
-[2FIX: ADD LINKS]
 
 For more information, see:
 
