@@ -812,7 +812,7 @@ def rescale_frames(frames):
 # end function rescale_frames
 
 
-def smooth_evolution(frames, num_new_frames=100, acc_mult=1, verbose=True):
+def smooth_frames(frames, num_new_frames=100, acc_mult=1, verbose=True):
     '''
     given input frames, interpolate new frames based on a target average speed between frames.
 
@@ -885,5 +885,5 @@ def smooth_evolution(frames, num_new_frames=100, acc_mult=1, verbose=True):
     # end for each new frame (except the first)
 
     return new_frames
-# end function smooth_evolution
+# end function smooth_frames
 

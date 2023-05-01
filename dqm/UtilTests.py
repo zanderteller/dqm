@@ -223,7 +223,7 @@ class UtilTests(unittest.TestCase):
     # end method test_rescale_frames
 
 
-    def test_smooth_evolution(self):
+    def test_smooth_frames(self):
         rng = np.random.default_rng(33322)
         dat = rng.random((100, 20))
 
@@ -240,7 +240,7 @@ class UtilTests(unittest.TestCase):
 
         # test with positive acceleration (> 1)
         acc_mult = 2
-        new_frames = utils.smooth_evolution(dqm.frames, num_new_frames, acc_mult=acc_mult, verbose=False)
+        new_frames = utils.smooth_frames(dqm.frames, num_new_frames, acc_mult=acc_mult, verbose=False)
         mean_first_speed = np.mean(np.linalg.norm(new_frames[:, :, 1] - new_frames[:, :, 0], axis=1))
         mean_last_speed = np.mean(np.linalg.norm(new_frames[:, :, -1] - new_frames[:, :, -2], axis=1))
         self.assertTrue(new_frames.shape[2] == num_new_frames and
@@ -249,13 +249,13 @@ class UtilTests(unittest.TestCase):
 
         # test with negative acceleration (< 1)
         acc_mult = 0.5
-        new_frames = utils.smooth_evolution(dqm.frames, num_new_frames, acc_mult=acc_mult, verbose=False)
+        new_frames = utils.smooth_frames(dqm.frames, num_new_frames, acc_mult=acc_mult, verbose=False)
         mean_first_speed = np.mean(np.linalg.norm(new_frames[:, :, 1] - new_frames[:, :, 0], axis=1))
         mean_last_speed = np.mean(np.linalg.norm(new_frames[:, :, -1] - new_frames[:, :, -2], axis=1))
         self.assertTrue(new_frames.shape[2] == num_new_frames and
                         0.25 < mean_last_speed / mean_first_speed < 0.26,
                         'smoothevolution must produce expected number of frames with slower speed at the end')
-    # end method test_smooth_evolution
+    # end method test_smooth_frames
 
 
 # end class UtilTests
