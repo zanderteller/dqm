@@ -163,7 +163,7 @@ def extract_manifolds(mat, max_dist):
         mat = np.copy(mat)
 
     if dqm_lib is None:
-        print('## WARNING: compiled-library code for extract_manifolds not found -- calling Python code')
+        print('## WARNING: in extract_manifolds -- compiled-library code not found, calling Python code...')
         manifolds, manifold_sizes = _extract_manifolds_python(mat, max_dist)
         return manifolds, manifold_sizes
     # end if don't have compiled-library code
@@ -336,7 +336,7 @@ def nearest_neighbors(mat):
     if dqm_lib is not None:
         dqm_lib.NearestNeighborsC(mat, num_rows, num_cols, nn_row_nums, nn_dists)
     else:
-        print('## WARNING: compiled-library code for nearest_neighbors not found -- calling Python code')
+        print('## WARNING: in nearest_neighbors -- compiled-library code not found, calling Python code...')
         nn_row_nums, nn_dists = _nearest_neighbors_python(mat)
     # end if /else have compiled-library code or not
 

@@ -9,6 +9,6 @@ What will the first frequently asked question be?
 
 .. collapse:: Answer
 
-	Good question. We'll see!
+   Good question. We'll see!
 
 |

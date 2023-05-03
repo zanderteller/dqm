@@ -13,13 +13,13 @@ Contents
 --------
 
 .. toctree::
-	:maxdepth: 1
+   :maxdepth: 1
 
-	installation
-	quick_start
-	user_guide
-	api
-	faq
-	links
+   installation
+   quick_start
+   user_guide
+   api
+   faq
+   links
 
 |

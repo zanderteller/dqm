@@ -57,8 +57,8 @@ Compilation from the command line should be simple. (Tested successfully on Ubun
 
 .. code-block:: console
 
-	$ cd <your clone main folder>/cpp
-	$ make all
+   $ cd <your clone main folder>/cpp
+   $ make all
 
 To be sure everything worked, check for the compiled library in its final location: ``<your clone main folder>/dqm/bin/dqm_python.so``.
 
@@ -73,6 +73,7 @@ To be sure everything worked, check for the compiled library in its final locati
 
 Mac
 ^^^
+
 **OpenMP**
 
 Unfortunately, Apple officially parted ways with OpenMP a while back. Solutions are possible, but it may or may not be easy. And remember that the exact solution may depend on which kind of chip you have: Intel or ARM (M).
@@ -83,10 +84,10 @@ This `R-Project for Mac <https://mac.r-project.org/openmp/>`_ page has prebuilt 
 
 .. code-block:: console
 
-	/usr/local/lib/libomp.dylib
-	/usr/local/include/ompt.h
-	/usr/local/include/omp.h
-	/usr/local/include/omp-tools.h
+   /usr/local/lib/libomp.dylib
+   /usr/local/include/ompt.h
+   /usr/local/include/omp.h
+   /usr/local/include/omp-tools.h
 
 Note that the DQM Makefile (``<your clone main folder>/cpp/Makefile``) expects to find the above files in those exact locations.
 
@@ -102,8 +103,8 @@ Once you've cleared those hurdles, compilation from the command line should be s
 
 .. code-block:: console
 
-	$ cd <your clone main folder>/cpp
-	$ make all
+   $ cd <your clone main folder>/cpp
+   $ make all
 
 To be sure everything worked, check for the compiled library in its final location: ``<your clone main folder>/dqm/bin/dqm_python.dylib``.
 

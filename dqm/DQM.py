@@ -140,7 +140,7 @@ class DQM:
         # if false, call all-Python versions of the code (generally much slower but much easier to debug --
         # see dqm_pure_python.py)
         if dqm_lib is None:
-            print("## WARNING: compiled-library code not found -- setting 'call_c' to false in DQM instance")
+            print("## WARNING: in DQM constructor -- compiled-library code not found, setting 'call_c' to false")
             self.call_c = False
         else:
             self.call_c = True
@@ -275,7 +275,7 @@ class DQM:
             if HAVE_PLT:
                 self.plot_pca()
             else:
-                print('# WARNING: need the matplotlib,pyplot package to do plots')
+                print('# WARNING: need the matplotlib.pyplot package to do plots')
     # end method run_pca
 
 
@@ -601,7 +601,7 @@ class DQM:
                                                         num_basis_rows, n_potential, self.sigma, self.step,
                                                         self.mass, simt, xops, exph)
             else:
-                raise RuntimeError("compiled-library code not loaded by package")
+                raise RuntimeError("in DQM instance, 'call_c' is True but compiled-library code not found")
 
             # reorder the dimensions to make xops <num_basis_rows x num_basis_rows x num_cols>
             # (note: we make the array contiguous here because it will be contiguous if we save it to disk and then
@@ -668,14 +668,14 @@ class DQM:
         num_chunks = self.basis_num_chunks
         basis_size = self.basis_size
 
-        assert round(basis_size) == basis_size, "'self.basis_size' must be an integer value"
+        assert basis_size is not None and round(basis_size) == basis_size,\
+            "'self.basis_size' must be an integer value"
         basis_size = int(basis_size)
+        assert self.basis_size > 0 and self.basis_size < num_rows,\
+            'desired basis size must be positive and less than number of rows to choose basis'
 
         if self.verbose:
             print('choosing {:,} basis rows by distance...'.format(basis_size))
-
-        assert self.basis_size > 0 and self.basis_size < num_rows,\
-            'desired basis size must be positive and less than number of rows to choose basis'
 
         rng = None
         if randomizing:
@@ -755,7 +755,7 @@ class DQM:
                 dqm_lib.ChooseBasisByDistanceC(rows, num_rows, num_cols, basis_size, basis_row_nums,
                                                first_basis_row_num)
             else:
-                raise RuntimeError("compiled-library code not loaded by package")
+                raise RuntimeError("in DQM instance, 'call_c' is True but compiled-library code not found")
             # end if/else have compiled-library instance or not
         else:
             basis_row_nums = choose_basis_by_distance_python(rows, basis_size, first_basis_row_num)
@@ -832,10 +832,10 @@ class DQM:
                     dqm_lib.BuildOverlapsC(sigma, self.basis_rows, rows, num_basis_rows, num_rows,
                                            self.frames.shape[1], overlaps)
                 else:
-                    raise RuntimeError("compiled-library code not loaded by package")
+                    raise RuntimeError("in DQM instance, 'call_c' is True but compiled-library code not found")
                 # end if/else have compiled-library instance or not
             else:
-                overlaps = build_overlaps_python(sigma, self.basis_rows, rows, verbose=verbose)
+                overlaps = build_overlaps_python(sigma, self.basis_rows, rows)
             # end if/else calling C or Python
         else:
             overlaps = np.zeros(0)  # empty vector
@@ -1244,7 +1244,7 @@ class DQM:
                                          self.basis_rows, self.basis_rows.shape[0], self.simt, num_basis_vecs,
                                          xops, self.exph, self.sigma, self.stopping_threshold)
             else:
-                raise RuntimeError("compiled-library code not loaded by package")
+                raise RuntimeError("in DQM instance, 'call_c' is True but compiled-library code not found")
             # end if/else have compiled-library instance or not
 
             # make new_frames <num_evolving_rows x num_cols x num_frames_to_build>
