@@ -452,8 +452,8 @@ This is not a horrible state of affairs, but DQM does provide 2 fixes for this p
 .. image:: images/quick_start_sigma3p9_smoothedframe60.png
    :align: center
 
-Using 'extract_manifolds'
--------------------------
+Using extract_manifolds
+-----------------------
 
 The :func:`extract_manifolds <dqm.utils.extract_manifolds>` function returns groups of rows that are near each other. A group can be 'near each other' in various ways, for instance in a very long chain. (This is why this function is *not* called 'extract_clusters'.) The logic in :func:`extract_manifolds <dqm.utils.extract_manifolds>` is somewhat like a simplified version of `DBSCAN <https://en.wikipedia.org/wiki/DBSCAN>`_.
 
@@ -478,8 +478,8 @@ Note: for extracting the 4 individual clusters from frame 30, the value for the 
                                                                                     dqm.mean_row_distance / 1000)
     print('Found these supercluster manifold sizes:', supercluster_manifold_sizes)
 
-Using 'run_simple'
-------------------
+Using run_simple
+----------------
 
 The :meth:`run_simple <dqm.DQM.run_simple>` method is indeed very simple -- in fact, here's the code in its entirety:
 

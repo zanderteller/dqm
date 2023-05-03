@@ -14,7 +14,7 @@ No assumptions are made about the underlying structure of the data.
 
 Visual and numerical analysis of the resulting animated 'evolution' of the data can reveal both clusters and extended structures, leading to a rich understanding of relationships between different subsets of the data.
 
-Among other uses, DQM can help with understanding how many models are needed for a given data set. (See the :ref:`Interpreting Results <Interpreting and Using Results>` section below for more on this subject.)
+Among other uses, DQM can help with understanding how many models are needed for a given data set. (See the section :ref:`How Many Models for Your Data?`)
 
 .. note::
 
@@ -88,11 +88,13 @@ Of course, you can also visualize higher PCA dimensions, not just the first 3. T
 
 **How Many PCA Dimensions To Use: The 'Spike' Model and Elbows**
 
+If a data cloud can be seen to have an 'effective dimensionality' that is lower than the total number of dimensions, projecting into a smaller number of PCA dimensions can be an important source of noise reduction (while also reducing computation time and memory usage).
+
 A theory known as the 'spike model' essentially posits that a horizontal plateau in a plot of decreasing PCA eigenvalues represents a floor of noise in the data. This suggests a method for choosing a number of PCA dimensions to work with that will maximize information and minimize noise: namely, by choosing a number of dimensions at the 'elbow' of a PCA eigenvalue plot. (See the `Quick Start example <quick_start.html#run-pca>`_, where the elbow suggests that 4 PCA dimensions is enough to capture the most important structure in the data.)
 
-If you find that the elbow is farther out than your computing resources will allow, it's a good idea to simply use as many dimensions as you can, to maximize the amount of information that you're working with. (*Computational complexity and memory usage for DQM are both essentially linear*, :math:`O(n)`, *in the number of dimensions being used.*)
+If you find that the elbow is farther out than your computing resources will allow, it's a good idea to simply use as many dimensions as you can, to maximize the amount of information that you're working with. (*Computational complexity and memory usage for DQM are both essentially linear*, :math:`O(n)`, *in the number of dimensions being used.*) It's helpful that the ordering of PCA dimensions is based only on variance in the entire data cloud, and is otherwise 'unbiased' (as far as any relationships with metadata or types of structures that may be revealed.)
 
-**Working with PCA in the** :class:`DQM <dqm.DQM>` **Class**
+**Working with PCA in the DQM Class**
 
 The following code block (following the `Quick Start example <quick_start.html#run-pca>`_) demonstrates choosing a number of PCA dimensions to work with:
 
@@ -223,10 +225,10 @@ Note that this method won't work if you're using a 'full' basis (i.e., all data 
 
 The DQM 'mass' parameter controls the 'transparency' of the DQM landscape for a data point during evolution:
 
-* for a very large mass, a point will get stuck in every local minimum in the landscape.
-* for a very small mass, a point will pass through every barrier and head straight for the lowest point in the landscape.
+* For a very large mass, a point will get stuck in every local minimum.
+* For a very small mass, a point will pass through every barrier and shoot straight toward the global miminum.
 
-Mass is typically set automatically, by a heuristic designed to make the landscape transparent to random density variations in uniform data. (See the :meth:`default_mass_for_num_dims <dqm.DQM.default_mass_for_num_dims>` method for details.)
+Mass is typically set automatically, by a heuristic designed to make the landscape transparent to density variations in uniform random data -- that is, the mass should be just small enough that density variations at that scale are ignored and passed through. (See the :meth:`default_mass_for_num_dims <dqm.DQM.default_mass_for_num_dims>` method for details.)
 
 The value of mass can be adjusted manually, but it's best to leave this as an 'advanced' technique.
 
@@ -252,21 +254,41 @@ A quick recap -- once you've:
 
 ... then you're ready to build the DQM operators, which will be used during evolution.
 
-This step itself is extremely simple:
+This step itself is extremely simple, using the :meth:`build_operators <dqm.DQM.build_operators>` method:
 
 .. code-block::
 
     dqm.build_operators()
 
-That's it. The operators are now stored in the instance, and you'll never need to touch them or change them. (*Note: this step can be slow for large data sets, especially when using a large basis.*)
+That's it. The operators are now stored in the instance, and you'll never need to work with them directly. (*Note: this step can be slow for large data sets, especially when using a large basis.*)
+
+**Changing the Operators**
+
+The operators depend on all of the following:
+
+* the raw data
+* the choice of basis
+* the DQM parameters: sigma, mass, and step
+
+If you change any of those things, you'll need to rebuild the operators.
+
+If the instance already has multiple frames, :meth:`build_operators <dqm.DQM.build_operators>` will raise an error. This is a safety precaution, to make it harder to allow the instance to wind up in an inconsistent state.
+
+You can use the :meth:`clear_frames <dqm.DQM.clear_frames>` method to clear frames (keeping frame 0 by default).
+
+.. warning::
+
+   The onus is currently on the user to make sure that a DQM instance doesn't wind up in an inconsistent state, with mismatches between the stored values for the basis, parameters (sigma), operators, and frames. There are a reasonable number of error checks in the code, but it's a complicated system. (DQM undoubtedly has room for improvement here.)
+
+**The Underlying Mathematics for the Operators**
 
 If you want the gory mathematical details, see the section on "Building the Quantum Operators" in the technical summary `Understanding DQM <https://github.com/zanderteller/dqm/blob/main/docs/Understanding%20DQM.pdf>`_.
 
 Here, we'll just give an extremely brief description of each operator:
 
 * ``dqm.simt``: this is the transpose of the 'similarity' matrix, which is used to convert state vectors from the 'raw' basis to the eigenbasis.
-* ``dqm.xops``: this is a 3-D tensor of position-expectation operators (each slice :math:`i` in the 3rd dimension is the operator matrix for the expected position of a point in the :math:`ith` dimension of the data.)
-* ``dqm.exph``: this is the complex-valued 'evolution' operator (that is, the exponentiated Hamiltonian time-evolution operator, which converts a state vector from frame :math:`n` into a new state vector for frame :math:`n+1`)
+* ``dqm.xops``: this is a 3-D tensor of position-expectation operators (each slice :math:`i` in the 3rd dimension is the operator matrix for the expected position of a point in the :math:`ith` dimension of the data space).
+* ``dqm.exph``: this is the complex-valued 'evolution' operator (that is, the exponentiated Hamiltonian time-evolution operator), which converts a state vector from frame :math:`n` into a new state vector for frame :math:`n+1`.
 
 Building Frames
 ^^^^^^^^^^^^^^^
@@ -289,64 +311,335 @@ The :meth:`build_frames_auto <dqm.DQM.build_frames_auto>` method will call :meth
 
 :meth:`build_frames_auto <dqm.DQM.build_frames_auto>` uses the ``dqm.stopping_threshold`` parameter to decide when a point has stopped moving. A point is considered to have stopped if it moves less then ``stopping_threshold`` distance from one frame to the next. ``stopping_threshold`` is set automatically to ``dqm.mean_row_distance / 1e6`` but can be adjusted manually.
 
-Iterating through Multiple Values of Sigma
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Coming soon...
-
-Saving and Loading DQM instances
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Coming soon...
+For large data sets and large basis sizes, building frames can be quite slow. In these cases, it's a very good idea to build a small number of frames first, to begin to understand what the landscape looks like, before committing to building hundreds or even thousands of frames.
 
 The run_simple Method of the DQM class
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Coming soon...
+The :meth:`run_simple <dqm.DQM.run_simple>` method conveniently wraps all the steps we've seen so far into a single call -- here's exactly what the method is actually doing:
+
+.. code-block::
+
+    def run_simple(self, dat_raw, sigma):
+        self.raw_data = dat_raw
+        self.sigma = sigma
+
+        self.create_frame_0()
+        self.build_operators()
+        self.build_frames_auto()
+    # end method run_simple
+
+Calling the method can be this simple:
+
+.. code-block::
+
+    dqm = DQM()
+    dqm.run_simple(dat_raw, sigma)
+
+Be aware of DQM's default behaviors (unless you change settings in the instance before you call the method):
+
+* It does a PCA transformation and keeps all PCA dimensions.
+* It uses a 'full' basis (all data points are in the basis).
+
+Especially for small data sets, doing multiple simple runs with various values of sigma can be the quickest way to understand the landscape that DQM is revealing.
+
+Saving and Loading DQM instances
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For evolutions that take a long time to build, saving the results of your work can be important. For this purpose, the :class:`DQM <dqm.DQM>` class has these methods:
+
+* :meth:`exists <dqm.DQM.exists>` (class method)
+* :meth:`load <dqm.DQM.load>` (class method)
+* :meth:`save <dqm.DQM.save>` (instance method)
+
+Each method takes a path to a folder and an optional name of a subfolder.
+
+The main folder stores information that can be common to multiple DQM landscapes (raw data, PCA results).
+
+The subfolder stores landscape-specific information (basis, DQM parameters, operators, frames).
+
+This setup allows you to group multiple results that share the same raw data. (It's up to you to name the subfolders in a way that keeps things organized and decipherable.)
+
+*For large data sets, basis sizes, and numbers of frames, keep in mind that the files on disk can become quite large.*
 
 Interpreting and Using Results
 ------------------------------
 
-Coming soon...
+DQM evolutions, or 'maps', are a rich source of nuanced information about the structure inherent in any data set. Interpreting and using results from DQM maps is, accordingly, a multifaceted issue, with plenty of room for exploration and development by the user. DQM is desigend and intended for open-ended exploration, and best results will often be achieved when you approach with an open mind. Learning answers to questions you didn't know you had can be a valuable source of insights and new directions.
+
+DQM has two main tools for interpretation: application of metadata by color, and the :func:`extract_manifolds <dqm.utils.extract_manifolds>` utility function. It's easy to imagine other, more sophisticated tools as well; a few are hinted at below, and some will probably make their way into DQM over time. For now, though, it's likely that finding interesting results in your DQM analyses will involve some tool-building on your part.
+
+Application of Metadata
+^^^^^^^^^^^^^^^^^^^^^^^
+
+In line with the importance of visualization in the DQM process, metadata is best applied to a data set by coloring of data points. There is potential for plenty of nuance here: the relationship(s) between data and metadata may be simple or complex, and may manifest in all or only in parts of the data set.
+
+In the :doc:`quick_start` guide, coloring the 4 clusters provides a clear (though artificial) example of coloring by metadata. The color syntax demonstrated there is entirely flexible, meaning it can be used to apply continuous metadata as a color map as well. (*Adding wiring to the* :func:`plot_frames <dqm.utils.plot_frames>` *function to make use of Plotly's built-in color maps is an obvious opportunity for improvement.*)
+
+Sets with No Interesting Structure
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Some data sets will have no 'interesting' structure; the entire set may be a simple spherical cloud, with points arriving at the cluster center from all directions during DQM evolution.
+
+**This result may often seem disappointing, but it's important to remember that a finding of no interesting structure is itself valuable information.** Most conventional modeling algorithms (clustering, regression, and classification) will happily report whatever structure you ask for, whether or not said structure actually exists in the data set.
+
+When this happens, there are a few obvious conclusions to consider:
+
+* You may need a better way to choose the interesting features (dimensions) in your data
+* You may need better preprocessing of your data
+* You may need better data
+
+**Order of Arrival**
+
+Before despairing, though... The dynamic aspect of DQM can sometimes provide value even in the 'uninteresting' case -- order of arrival at the cluster center can itself contain information. In a very simple hypothetical example: healthy samples may consistently arrive earlier (meaning they're closer to the center of the cloud), with sick samples consistently arriving later.
+
+Clusters
+^^^^^^^^
+
+Multiple clusters that have separated during DQM evolution become very easy to tell apart.
+
+DQM's primary tool for numerical separation of clusters is the :func:`extract_manifolds <dqm.utils.extract_manifolds>` utility function. You can also use any other conventional clustering algorithm, or even just separate by area of space (by setting thresholds in one or several data dimensions).
+
+Note that different clusters, and different numbers of clusters, can be extracted from different frames within a given DQM evolution; see the Quick Start guide's section on `Using extract_manifolds <quick_start.html#using-extract-manifolds>`_ for a clear example.
+
+1-D Extended Structures as Subclusters
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+1-dimensional extended structures are a regular occurrence in DQM maps -- acting as streambeds in a landscape, with points flowing along the structure to arrive at a final location.
+
+When multiple 1-D structures flow into the same final location from different directions, these structures can be meaningfully treated as subclusters of the main cluster.
+
+These subclusters can be separated by numerical methods (including, as in the `Quick Start <quick_start.html#using-extract-manifolds>`_ guide, by using :func:`extract_manifolds <dqm.utils.extract_manifolds>` on an intermediate frame). In some cases, though, it may be easier to separate them by isolating the main cluster and then building a new DQM map to separate the subclusters. (The Quick Start guide's section on `using run_sumple <quick_start.html#using-run-simple>`_ demonstrates this technique as well.)
+
+You may even see branches in these 1-D structures, like multiple tributaries feeding into a larger river. The relative importance of these sub-subclusters will often be context-dependent (possibly depending on relationships with metadata).
+
+1-D Extended Structures as Regressions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Most generally, a regression is a well defined (usually mathematical) relationship between a dependent variable and some number of independent variables.
+
+In DQM, if some continuous metadata variable is seen to vary consistently along a 1-dimensional extended structure, this is clearly evidence of a regression in the above sense.
+
+Unlike conventional regression algorithms, DQM does not provide you with a mathematical formula describing the revealed relationship between the metadata and the data dimensions. On the other hand, DQM makes no assumptions of any kind about the shape underlying the relationship. In fact, you don't even have to know beforehand whether you're going to see a regression relationship or not.
+
+Also, a DQM map can itself be used as a model, bypassing the need for a mathematical formula describing the relationship. (See the section below on :ref:`running new points <Running New Points>`.)
+
+Higher-Dimensional Extended Structures
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+DQM has been seen to uncover 2-dimensional manifolds in real data, and there are no theoretical barriers to seeing even higher-dimensional manifolds as well (though, it would seem, these may be rare).
+
+Interpretation and analysis of these higher-dimensional manifolds may be valuable but will be intrinsically more complex.
+
+One approach to exploring the effective dimensionality of a particular structure is to isolate that structure and then re-run PCA, typically on an intermediate frame of the evolution, just for the points in the structure in question.
+
+The utility function :func:`rescale_frames <dqm.utils.rescale_frames>` can also be useful here; it effectively 'zooms in' on a structure that is shrinking as the DQM evolution unfolds, making it much easier to see the nature of the structure later in the evolution. Subselecting data points to see only the structure in question (with no outliers) is important in order for this tool to be useful.
+
+Area-of-Space Relationships
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+There may be cases where you notice clear differences between metadata values in different areas of the data space, without useful structures forming in the DQM evolution. This kind of observation can lead back in the direction of applying a traditional classifer to your data.
+
+Outliers
+^^^^^^^^
+
+'Outliers' in DQM are points that never move -- or perhaps move just enough to join very small 'outlier clusters'. A point being an outlier is a relative concept in DQM -- increasing sigma can pull outliers into larger structures (which is sometimes the main motivation for increasing sigma).
+
+Outliers should not necessarily just be ignored -- as with the 'order of arrival' observation above, outliers may themselves have a meaningful relationship with the metadata.
+
+How Many Models for Your Data?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+One of the most valuable aspects of DQM analysis can be determining how many models you actually need in order to accurately describe your data set.
+
+To illustrate the idea, consider a simple hypothetical example: suppose you see three clusters in your data set. Two of those clusters are seemingly spherical 'point' clusters, with points arriving at the cluster centers from all directions. The third cluster, however, shows a clear 1-dimensional extended structure, possibly with an interesting relationship to some metadata value. Knowing that a more conventional regression algorithm may be usefully applied, but only to a particular subset of your data, is a vitally important insight.
+
+Feature Selection
+^^^^^^^^^^^^^^^^^
+
+Feature selection -- the process of identifying which features (i.e., dimensions) in your data are the important ones -- is an important aspect of data analysis.
+
+**General Feature Selection**
+
+Particularly when using a PCA transformation, you can look at the weights in the first few PCA dimensions. (PCA dimension weights are stored in the columns of the ``dqm.pca_eigvecs`` matrix.) Is there a small number of dimensions with much larger weights than other dimensions? (*Note that this is a PCA analysis which does not actually involve DQM at all.*)
+
+For a given subset of features, if you build a DQM map with those features, do you see essentially the same structure that you saw in the 'full' map using all features? This is a decent indication that your subset of features contains all of the important information leading to the structure that you're seeing.
+
+**Feature Selection for DQM Clusters**
+
+Simple differential-expression calculations can be applied between clusters to see which features show the strongest differentiation.
+
+**Feature Selection for DQM Extended Structures**
+
+Given an ordering of points along a 1-D structure (paused/frozen at some frame of a DQM evolution), which features (dimensions) are more or less highly correlated with the ordering of points along the structure?
+
+These correlations are clearly connected to the direction along which the 1-D structure extends in the data space. Of course, if the 1-D structure is nowhere close to straight, such correlations will be weak; this is a sign that the structure relies on all (or at least many) of your features, and it's likely to be difficult to retain the structure when subselecting to a smaller feature set.
+
+**DQM Mapping of Features**
+
+By simply transposing your raw-data matrix, you can proceed to build a DQM map where the points on the map are now your original features (dimensions), and the dimensions of the data space are now your samples.
+
+This approach can be complex and nuanced, and may provide insights well outside of what other feature-selection methods even consider.
+
+Note that normalization of your features (the rows in your transposed raw data) is crucially important here. (As a starting point, be aware that L2 normalization is highly preferable to L1 normalization, which can create intriguing but meaningless 'spikes' in a DQM feature map.)
 
 Running New Points
 ------------------
 
-Coming soon...
+Any given DQM map can actually be used as a model, in the sense that new 'out-of-sample' points can be evolved in that map, and the points' behavior in the map can lead to conclusions and predictions about the new points.
 
-Additional Topics
------------------
+A DQM map can be used for:
 
-Coming soon...
+* classification -- based on which cluster (if any) each new point joins
+* regression -- based on where along some extended structure (if at all) each new point arrives (at some predetermined 'moment' -- i.e., frame -- in the evolution)
+
+When using an existing map as a model, note that the DQM map is *not* updated to include the effect of the new points on the landscape. The map itself is entirely 'in-sample', based only on the original data.
+
+The process of running new points should be as follows:
+
+* Apply any data preprocessing to new points. For this to make sense, preprocessing of new points needs to be *exactly* the same as the preprocessing of the original data.
+* Call the :meth:`run_new_points <dqm.DQM.run_new_points>` method, where each input row is a preprocessed new point.
+
+**Rule of thumb: if you can't run new points one at a time, you must be cheating somehow.** In other words: if you're using any aggregate statistics about your new points, then you're not fully treating them as 'out-of-sample'.
+
+The outputs of :meth:`run_new_points <dqm.DQM.run_new_points>` are:
+
+* a set of frames for the new points (evolved to as many frames as currently exist in ``dqm.frames``)
+* a vector of in-sample basis overlaps (for all original non-basis points)
+* a vector of out-of-sample basis overlaps (for all new points)
+* a vector of in-sample proportional norms (see below)
+* a vector of out-of-sample proportional norms (see below)
 
 Out-of-Distribution Issues
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Coming soon...
+Most conventional modeling algorithms will happily model a new point even if that new point is completely outside of the distribution of data used to build the model. This is clearly problematic.
+
+DQM provides a way -- two ways, actually -- to address this out-of-distribution issue.
+
+.. note::
+
+   In both situations below (for both norms and overlaps), thresholds for what values qualify as 'too low' are not well defined, may be context-dependent, and are subjects for further study.
+
+**'Off the Map'**
+
+*The following only applies when using a PCA transformation.*
+
+The proportional-norm vectors mentioned above (both in-sample and out-of-sample) present a 'norm' for each point that is actually the ratio of norm 1 / norm2:
+
+* norm 1: the PCA-transformed (centered, rotated, projected) L2 norm for the point
+* norm 2: the original (centered) L2 norm for the point
+
+A 'perfect' norm has a value of 1 (i.e., no loss of information).
+
+Any out-of-sample norms that are significantly below the distribution of in-sample norms should be considered to be 'off the map' -- that is, too much information about the new point has been lost in the PCA transformation (more so than for most/all in-sample points).
+
+If the in-sample distribution of norms is itself too low, that may prompt you to reconsider the value of the map you're working with. (Of course, this issue is relative to how much 'loss of information' you believe is either helpful noise reduction or an acceptable cost of dimensionality reduction.)
+
+**'Holes in the Map'** 
+
+*The following applies whether a PCA transformation is used or not.*
+
+Any new points with basis overlaps well below the distribution of in-sample basis overlaps are not being well represented by the basis.
+
+To distinguish how we talk about the two issues: here, rather than being 'off the map', we can think of these low-overlap points as existing in 'holes' or 'empty/blank spots' in the map.
+
+As mentioned in the section on :ref:`Choosing a Basis` above, low-overlap points can 'jump ' or 'snap' closer to nearby basis points at the beginning of evolution. Visualization of the evolution for such a point can be misleading, and it may be better to exlude them from visualization entirely.
+
+Again, a distribution of in-sample basis overlaps that is itself too low should be cause for reconsideration of the map.
+
+Additional Topics
+-----------------
 
 Working with Large Data Sets
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Coming soon...
+**Large Numbers of Dimensions**
+
+DQM has been successfully used for very large numbers of dimensions (up to ~500,000), with good results.
+
+Keep in mind that a PCA transformation will give a total number of dimensions that is the *minimum* of the number of raw dimensions and the number of data points. For a data set with 1,000 samples and 500,000 dimensions, PCA only needs 1,000 dimensions to fully describe the samples.
+
+If you're dealing with very large numbers of both dimensions *and* samples, the PCA calculations will be... challenging. DQM in its current form does not provide a solution to this problem.
+
+**Large Numbers of Data Points**
+
+DQM has been used successfully on data sets with millions of data points.
+
+Depending particularly on the size of the basis you're using, processing millions of points can consume a whole lot of computing resources. It's a good idea to run timing tests to give yourself an estimate of how long running all points will take.
+
+There are also other strategies that can help you learn about the structure of your data more efficiently than waiting for millions of rows to evolve for hundreds or thousands of frames.
+
+Here's one example of a strategic starting point: choose two random subsets of points from your data -- say, 10,000 points each. Build a separate DQM map for each subset. Are you seeing the same structure or not? If not, work your way up to a sample size that starts to give you a clear picture of what the structure of the entire data set looks like. As a further test at each sample size, you can run some or all of the points from each subset as new, out-of-sample points in the map built with the *other* subset, to get an even more specific sense of how similar or different the two maps are. (Also: in this example, as always, it's efficient to start with relatively small basis sizes and work your way up until you're getting the resolution that you need.)
+
+**Computational-Complexity Notes**
+
+Different parts of the DQM workflow have different computational complexities, but these are general facts to keep in mind:
+
+* **number of DQM dimensions**: complexity is essentially linear, :math:`O(n)`.
+* **number of data points**: complexity is essentially linear, :math:`O(n)`. Choosing the basis is the exception: if you want to start from the greatest outlier, complexity there is quadratic, :math:`O(n^2)`.
+* **basis size**: the big cost is building frames, where the complexity is approximately cubic, :math:`O(n^3)`. A larger basis gets more expensive very quickly -- so, again, it's best to start with relatively small basis sizes and work your way up to the resolution that you need.
+
+**Memory-Usage Notes**
+
+There are two big considerations for memory usage (in memory and on disk):
+
+The position operators (stored in ``dqm.xops``) are ``<basis size x basis size x number of DQM data dimensions>``. For a basis size of 1,000 and 100 DQM data dimensions, that comes out to 0.8 GB.
+
+The frames are the big one -- they're ``<number of points x number of DQM data dimensions x number of frames>``. For, say, 10,000 points, 100 DQM data dimensions, and 1,000 frames, that comes out to 8 GB. (If you're dealing with millions of data points - well, you do the math...)
+
+**Parallel Processing**
+
+Be warned: DQM will eat up all the CPU resources it can get its hands on. (The compiled C++ code uses the OpenMP library.) Particularly when building frames, you may see all of your CPUs working at full capacity.
+
+As far as parallel processing across multiple machines is concerned, DQM has that potential but is not currently set up for it. Here are the changes that could be made:
+
+* In building the operators, there's a function in the compiled code (AggregatePotentialContributions) where a map/reduce operation across all data points could be easily applied.
+* In building frames, the evolution of each data point is entirely independent. So, the evolution of batches of data points could easily be farmed out to multiple machines.
 
 Working with Other Data Types
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Coming soon...
+DQM is inherently designed and built to work within a Euclidean data space of continuous, real-valued dimensions.
+
+However, there are various techniques for converting other data types into a Euclidean data space, so that a DQM analysis might be usefully performed. Below are two examples.
+
+**Categorical Data**
+
+Consider a categorical data dimension -- say, hospital name, with 5 different possible values. There is no ordering to the possible values in this dimension.
+
+A simple solution is to replace the dimension with 5 new binary dimensions, each containing a simple 0/1 (yes/no) for each possible hospital name. It's clear how to assign coordinates to a given sample, and every point in these 5 new dimensions is equidistant from every other point, preserving the desired lack of ordering. (By design, a given sample should always have exactly one value of 1 in these 5 dimensions.)
+
+**Graph/Network Data**
+
+For an undirected graph (the situation for a directed graph is harder), a popular metric of distance from one vertex to another is the commute time: the expected time for a random walk from vertex 1 to arrive at vertex 2, plus the expected time for a random walk to go back from vertex 2 to vertex 1. (This definition makes the commute time symmetric, necessary for a distance metric.)
+
+These commute-time distances allow you to construct a Euclidean distance matrix, which is just the symmetric matrix of pairwise distances between vertices. From there, you can construct a set of Euclidean coordinates for each vertex that satisfies all distances in the distance matrix.
 
 The Curse of Dimensionality
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Coming soon...
+Any very high-dimensional space has an extremely large number of 'corners', and so it's extremely easy for a data set to fail to cover the entire space, even for a very large number of data points. DQM is not in any way immune to this problem.
+
+Even in this case, there's the separate question of whether a given data set is covering the range of possible combinations of values, in all dimensions, that you're ever likely to see. If so, that implies that all real data in the given domain lives within some lower-dimensional manifold of the high-dimensional space.
+
+The crucial question is whether this issue impairs the functioning of DQM in high dimension. The short answer is, 'no'.
+
+DQM is concerned with variations in data density in the space -- in other words, patterns in the relative distances of data points from each other.
+
+If every data point in a high-dimensional space is off in its own unique corner of the space, with every point thus more or less equidistant from every other point, then DQM will see that, in the form of a lack of interesting structure in the data set. (*On an important related note: the heuristic in the* :meth:`default_mass_for_num_dims <dqm.DQM.default_mass_for_num_dims>` *method is designed to make mass just small enough that DQM will ignore -- that is, not treat as interesting structure -- typical density variations in uniform random data. The scale of those variations goes up with the number of dimensions, and thus so does the default mass.*)
+
+If however, we are in the situation where all possible observations lie in some lower-dimensional manifold, and the data set reflects some degree of interesting structure within that manifold, then DQM will reveal that structure.
+
+*As a separate matter, entirely distinct from the curse of dimensionality, we can ask how small a data set needs to be before we risk mistaking random variations for 'structure'. DQM is also not immune to issues of statistical significance.*
 
 Non-Locality
 ^^^^^^^^^^^^
 
-Coming soon...
+It's a key feature of DQM that every point in a data set effects the entire landscape for that data set, by virtue of the Gaussian distribution placed around it. (The effect is strongest in the immediate vicinity of the point, of course.) This means that removing a subset of points from a data set can noticeably change the relationships between the points that are left.
 
-Is DQM a Form of Machine Learning?
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+A notable example involves relative sample sizes. Consider two metadata categories - for example, healthy and sick. A set of healthy samples and a set of sick samples may form two clearly separate and distinct clusters. However, this may only be true if the relative sample sizes for the two categories are roughly equal. If, on the other hand, there are far more samples in one category than in the other, the less frequent category may then appear as a subcluster of the better represented category, or possibly may not be distinguishable at all (if the imbalance is sufficiently extreme).
 
-Coming soon...
+This is a subtlety to be cautious about; there is a learned intuition about DQM landscapes that informs which aspects of a landscape may change under such circumstances.
 
 |
