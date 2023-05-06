@@ -8,14 +8,6 @@ class UtilTests(unittest.TestCase):
 
 
     def test_pca(self):
-        '''
-        test that the 'pca' function results match results from np.linalg.svd, for 2 cases:
-        * num_rows > num_cols
-        * num_rows < num_cols
-
-        :return: None
-        '''
-
         # test 1: num_rows > num_cols
         mat = np.random.rand(2000, 500)
         eigvals, eigvecs = utils.pca(mat, False)
@@ -37,11 +29,11 @@ class UtilTests(unittest.TestCase):
         helper method for test_pca method: test that PCA eigenvalues/eigenvectors match S and VT from
         the SVD decomposition.
 
-        :param eigvals: vector of PCA eigenvalues.
-        :param eigvecs: matrix with PCA eigenvectors in the columns.
-        :param s: vector of SVD singular values.
-        :param vt: transposed matrix of SVD right singular values.
-        :param num_rows: number of rows in original matrix
+        :param eigvals: Vector of PCA eigenvalues.
+        :param eigvecs: Matrix with PCA eigenvectors in the columns.
+        :param s: Vector of SVD singular values.
+        :param vt: Transposed matrix of SVD right singular values.
+        :param num_rows: Number of rows in original matrix.
         :return: None
         '''
 

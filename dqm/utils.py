@@ -20,7 +20,8 @@ def pca(mat, verbose=True):
     Given a matrix, compute and return the PCA eigenvalues and associated eigenvectors (principal components).
 
     :param mat: A 2-D real-valued matrix.
-    :return: tuple of:
+    :param verbose: Boolean: whether to report on various operations. Default True.
+    :return: A tuple of:
 
         * Vector of eigenvalues, in descending order of magnitude (all are non-negative).
         * Matrix with corresponding eigenvectors (principal components) in the columns.
@@ -320,11 +321,11 @@ def nearest_neighbors(mat):
     '''
     Return nearest-neighbor row number and distance for each row in mat.
 
-    :param mat: a 2-D real-valued matrix. No default.
-    :return: tuple of:
+    :param mat: A 2-D real-valued matrix. No default.
+    :return: A tuple of:
 
         * Vector of nearest-neighbor row number for each row.
-        * Vector of nearest-neighbor distances for each row.
+        * Vector of nearest-neighbor distance for each row.
     '''
 
     assert type(mat) is np.ndarray and mat.ndim == 2, "'mat' must be a 2-dimensional array"
@@ -351,11 +352,11 @@ def _nearest_neighbors_python(mat):
     This is the version of nearest_neighbors that does *not* call the compiled C++ code. It will generally be
     much slower.
 
-    :param mat: a 2-D real-valued matrix. No default.
-    :return: tuple of:
+    :param mat: A 2-D real-valued matrix. No default.
+    :return: A tuple of:
 
         * Vector of nearest-neighbor row number for each row.
-        * Vector of nearest-neighbor distances for each row.
+        * Vector of nearest-neighbor distance for each row.
     '''
 
     assert type(mat) is np.ndarray and mat.ndim == 2, "'mat' must be a 2-dimensional array"
@@ -389,7 +390,7 @@ def plot_frames(frames, color='blue', size=5, skip_frames=1, fps=10, title='', l
         * Specifying different colors and/or different sizes for each frame will make rendering take *much* longer.
 
     :param frames: 2-D or 3-D array of frames. If there are more than 3 columns in 2nd dim, we use the first
-        3 columns for plotting. Animation is only enabled if there are multiple frames in 3rd dim.
+        3 columns for plotting. Animation is only enabled if there are multiple frames in 3rd dim. No default.
     :param color: Color information for points -- can be:
 
         * String (must be a color understood by Plotly), applied to all points. Default 'blue'.
@@ -420,7 +421,6 @@ def plot_frames(frames, color='blue', size=5, skip_frames=1, fps=10, title='', l
         proportions. Default True.
     :param show_gridlines: Boolean: whether to show gridlines. Default True.
     :param show_ticklabels: Boolean: whether to show axis tick labels. Default True.
-
     :return: None
     '''
 
@@ -622,10 +622,11 @@ def plot_frames_ipv(frames, color='blue', size=4, skip_frames=1, fps=10, labels=
     '''
     Display interactive animated 3-D plot of a set of frames, using IPyVolume.
 
-    WARNING: IPyVolume is not a fully mature/stable package -- it may be buggy.
+    WARNING: IPyVolume is not a fully mature/stable package -- it may be buggy. (However, it may handle large
+    numbers of data points and/or frames much better than Plotly will in plot_frames.)
 
     :param frames: 2-D or 3-D array of frames. If there are more than 3 columns in 2nd dim, we use the first
-        3 columns for plotting. Animation is only enabled if there are multiple frames in 3rd dim.
+        3 columns for plotting. Animation is only enabled if there are multiple frames in 3rd dim. No default.
     :param color: Color information for points -- can be:
 
         * String (must be a color understood by Plotly), applied to all points. Default 'blue'.
@@ -647,7 +648,6 @@ def plot_frames_ipv(frames, color='blue', size=4, skip_frames=1, fps=10, labels=
     :param labels: Array/list/tuple of axis labels. default ['X', 'Y', 'Z'].
     :param show_axes: Boolean: whether to show axes (axis label and tick labels). 'labels' is ignored if this is
         False. default True.
-
     :return: None
     '''
 
@@ -748,7 +748,7 @@ def cat_frames(frames1, frames2=None):
     :param frames1: 3-D array of frames, or list of 3-D arrays of frames. If it's a list, we cat together
         all sets of frames in the list and return the result. No default.
     :param frames2: 3-D ndarray of frames. Must be None if frames1 is a list. Default None.
-    :return: new combined 3-D array of frames.
+    :return: New combined 3-D array of frames.
     '''
 
     if type(frames1) is list:
@@ -790,7 +790,7 @@ def add_bookend_frames(frames, num_bookend_frames):
 
     :param frames: 3-D array of frames: <num rows x num dims x num_frames>.
     :param num_bookend_frames: number of bookend frames to add at beginning and end of frames.
-    :return: new array of frames with bookend frames included
+    :return: New array of frames with bookend frames added.
     '''
 
     assert type(frames) == np.ndarray and frames.ndim == 3, "'frames' must be 3-dimensional ndarray"
@@ -850,7 +850,7 @@ def smooth_frames(frames, num_new_frames=100, acc_mult=1, verbose=True):
         2 output frames) is S, final average speed (between last 2 output frames) will be acc_mult * S. Default 1
         (constant average speed for moving points).
     :param verbose: Boolean: whether to report progress. Default True.
-    :return: New 3-D array of smoothed-evolution frames.
+    :return: New 3-D array of smoothed frames.
     '''
 
     assert num_new_frames > 0, "'num_new_frames' must be positive"

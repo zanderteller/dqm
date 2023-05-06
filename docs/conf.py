@@ -1,9 +1,9 @@
 # Configuration file for the Sphinx documentation builder.
 
 
-# 2FIX: REMOVE (FOR LOCAL DOC BUILD ONLY)
-import os, sys
-sys.path.insert(0, '.')
+# uncomment these lines for local builds (in place of pip install of our package)
+#import sys
+#sys.path.insert(0, '.')
 
 
 # -- Project information

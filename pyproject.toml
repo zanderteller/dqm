@@ -3,7 +3,7 @@ requires = ["setuptools"]
 
 [project]
 name = "dqm"
-authors = [{name = "Zander Teller", email = "zander@zanderteller.net"}]
+authors = [{name = "Zander Teller", email = "zander.teller@gmail.com"}]
 description = "Dynamic Quantum Mapping"
 version = "0.1.0"
 

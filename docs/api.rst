@@ -1,5 +1,5 @@
-API
-===
+API Reference
+=============
 
 The dqm package has one class, :class:`DQM <dqm.DQM>`, and several :mod:`utility functions <dqm.utils>`.
 

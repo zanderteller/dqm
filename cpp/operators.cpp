@@ -30,7 +30,7 @@ inputs
 * sigma: value of sigma (width of Gaussians)
 
 output
-* square matrix of Gaussian overlaps
+* square matrix of pairwise Gaussian overlaps (inner products)
 */
 Matrix<double> MakeOverlaps(Matrix<double>& mat, double sigma)
 {
@@ -84,7 +84,7 @@ inputs
 * sigma: value of sigma (width of Gaussians)
 
 output
-* <rows1 x rows2> matrix of Gaussian overlaps
+* <rows1 x rows2> matrix of pairwise Gaussian overlaps (inner products)
 */
 Matrix<double> MakeOverlaps(Matrix<double>& mat1, Matrix<double>& mat2, double sigma)
 {

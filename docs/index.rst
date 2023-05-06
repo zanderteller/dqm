@@ -7,7 +7,7 @@ DQM works on any given data set, using the mathematical framework of quantum mec
 
 No assumptions are made about the underlying structure of the data.
 
-Visual and numerical analysis of the resulting animated ‘evolution’ of the data can reveal both clusters and extended structures, leading to a rich understanding of relationships between different subsets of the data.
+Visual and numerical analysis of the resulting animated ‘evolution’ of the data can reveal both clusters and extended structures, leading to a rich understanding of relationships between and within different subsets of the data.
 
 Contents
 --------

@@ -5,8 +5,6 @@
 #include <vector>
 #include <algorithm>
 
-// NOTE: main functions
-
 
 // return the squared Euclidean L2 distance between 2 rows of a matrix
 double squared_distance(double* mat, int num_rows, int num_cols, int row_idx_1, int row_idx_2)
