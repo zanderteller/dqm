@@ -65,9 +65,9 @@ To be sure everything worked, check for the compiled library in its final locati
 Windows
 ^^^^^^^
 
-Use Visual Studio.
+Use `Visual Studio <https://visualstudio.microsoft.com/>`_.
 
-Open the VS solution ``<your clone main folder>/cpp/dqm_python.sln`` and build the solution. (Make sure the build configuration is set to 'Release' and not 'Debug'.)
+Open the Visual Studio solution in the DQM repository (``<your clone main folder>/cpp/dqm_python.sln``) and build the solution. (Make sure the build configuration is set to 'Release' and not 'Debug'.)
 
 To be sure everything worked, check for the compiled library in its final location: ``<your clone main folder>/dqm/bin/dqm_python.dll``.
 

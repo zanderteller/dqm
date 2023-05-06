@@ -1,4 +1,4 @@
-from . import DQM, extract_manifolds
+from . import DQM, get_clusters
 import numpy as np
 from copy import copy
 import unittest
@@ -10,12 +10,11 @@ class DQMTests(unittest.TestCase):
         inst_vars = list(vars(dqm).keys())
 
         # sanity check: if instance variables are changed, they must be changed here as well
-        checklist = ['basis_method', 'basis_num_chunks', 'basis_rand_seed', 'basis_row_nums', 'basis_rows',
-                      'basis_size', 'basis_start_with_outlier', 'call_c', 'exph', 'frames', 'mass',
-                      'mean_row_distance', 'min_report_time', 'non_basis_row_nums', 'overlap_mean_threshold',
-                      'overlap_min_threshold', 'pca_cum_var', 'pca_eigvals', 'pca_eigvecs', 'pca_num_dims',
-                      'pca_transform', 'pca_var_threshold', 'raw_col_means', 'raw_data', 'sigma', 'simt',
-                      'step', 'stopping_threshold', 'verbose', 'xops']
+        checklist = ['basis_num_chunks', 'basis_rand_seed', 'basis_row_nums', 'basis_rows', 'basis_size',
+                     'basis_start_with_outlier', 'call_c', 'exph', 'frames', 'mass', 'mean_row_distance',
+                     'min_report_time', 'non_basis_row_nums', 'overlap_mean_threshold', 'overlap_min_threshold',
+                     'pca_cum_var', 'pca_eigvals', 'pca_eigvecs', 'pca_num_dims', 'pca_transform', 'pca_var_threshold',
+                     'raw_col_means', 'raw_data', 'sigma', 'simt', 'step', 'stopping_threshold', 'verbose', 'xops']
         self.assertTrue(sorted(inst_vars) == sorted(checklist), 'DQM instance variables must match the checklist')
     # end method test_instance_variables
 
@@ -105,7 +104,7 @@ class DQMTests(unittest.TestCase):
     # end method test_plot_pca
 
 
-    def test_choose_num_pca_dims_by_variance(self):
+    def test_choose_num_pca_dims(self):
         dqm = DQM()
         dqm.verbose = False
 
@@ -113,23 +112,26 @@ class DQMTests(unittest.TestCase):
         dqm.raw_data = rng.random((200, 37))
         dqm.run_pca()
 
-        # test that method raises an error when no relevant settings are available
-        dqm.num_pca_dims = None
+        # test that method defaults to using all PCA dimensions
+        dqm.pca_num_dims = None
         dqm.pca_var_threshold = None
-        try:
-            dqm.choose_num_pca_dims_by_variance()
-            success = False
-        except AssertionError:
-            success = True
-        self.assertTrue(success, "must raise AssertionError when instance doesn't have relevant settings")
+        num_pca_dims = dqm._choose_num_pca_dims()
+        success = num_pca_dims == dqm.pca_eigvals.size
+        self.assertTrue(success, "must default to using all PCA dimensions")
 
         # test pca_var_threshold
         dqm.pca_var_threshold = 0.75
-        dqm.choose_num_pca_dims_by_variance()
+        num_pca_dims = dqm._choose_num_pca_dims()
         # note: the correct value of 22 is specific to the random seed used above
-        success = dqm.pca_num_dims == 22
+        success = num_pca_dims == 22
         self.assertTrue(success, 'pca_var_threshold must work correctly')
-    # end method test_choose_num_pca_dims_by_variance
+
+        # test pca_num_dims (including that it overrides pca_var_threshold)
+        dqm.pca_num_dims = 17
+        num_pca_dims = dqm._choose_num_pca_dims()
+        success = num_pca_dims == 17
+        self.assertTrue(success, 'pca_num_dims must override pca_var_threshold and must work correctly')
+    # end method test_choose_num_pca_dims
 
 
     def test_create_frame_0(self):
@@ -147,16 +149,16 @@ class DQMTests(unittest.TestCase):
         rng = np.random.default_rng(557)
         mat = rng.random((132, 18))
 
-        # test that frame 1 is just unchanged raw data when pca_transform is 'off'
+        # test that frame 0 is just unchanged raw data when pca_transform is 'off'
         dqm.pca_transform = False
         frame0 = dqm.create_frame_0(mat)
         mat2 = frame0[:, :, 0]
         success = np.array_equal(mat, mat2)
-        self.assertTrue(success, 'with all flags off, frame 1 must match raw data')
+        self.assertTrue(success, 'with all flags off, frame 0 must match raw data')
 
-        # test that frame 1 is 3-D
+        # test that frame 0 is 3-D
         success = frame0.ndim == 3
-        self.assertTrue(success, 'frame 1 must be 3-D')
+        self.assertTrue(success, 'frame 0 must be 3-D')
 
         # test PCA transform
         dqm.pca_transform = True
@@ -167,7 +169,7 @@ class DQMTests(unittest.TestCase):
         success = dqm.raw_col_means is not None and dqm.pca_eigvecs is not None and dqm.pca_num_dims > 0 and \
                     dqm.frames is not None
         self.assertTrue(success,
-                        'creating frame 1 with raw data in instance must set PCA member variables and frame 1')
+                        'creating frame 0 with raw data in instance must set PCA member variables and frame 0')
 
         # test that passing raw data to the method produces same results as using it when stored in dqm.raw_data
         frame0 = dqm.create_frame_0(mat)
@@ -184,7 +186,7 @@ class DQMTests(unittest.TestCase):
         rng = np.random.default_rng(699)
         dqm.raw_data = rng.random((202, 33))
         dqm.create_frame_0()
-        dqm.set_basis()
+        dqm._set_basis()
         dqm.clear_basis()
 
         # test that all relevant instance member variables are reset
@@ -202,7 +204,7 @@ class DQMTests(unittest.TestCase):
         dqm.create_frame_0()
 
         # test setting of full basis
-        dqm.set_basis()
+        dqm._set_basis()
         num_rows = dqm.raw_data.shape[0]
         num_basis_rows1 = len(dqm.basis_row_nums)
         num_basis_rows2 = dqm.basis_rows.shape[0]
@@ -212,7 +214,7 @@ class DQMTests(unittest.TestCase):
 
         # test setting of smaller basis
         test_non_basis_n = 10
-        dqm.set_basis(list(range(num_rows - test_non_basis_n)))
+        dqm._set_basis(list(range(num_rows - test_non_basis_n)))
         num_basis_rows1 = len(dqm.basis_row_nums)
         num_basis_rows2 = dqm.basis_rows.shape[0]
         num_non_basis_rows = len(dqm.non_basis_row_nums)
@@ -353,14 +355,14 @@ class DQMTests(unittest.TestCase):
         rng = np.random.default_rng(509)
         mat = rng.random((500, 16))
 
-        # test that method raises an error when frame 1 is not set
+        # test that method raises an error when frame 0 is not set
         dqm.frames = None
         try:
             dqm.estimate_mean_row_distance()
             success = False
         except AssertionError:
             success = True
-        self.assertTrue(success, "must raise AssertionError when instance doesn't have frame 1")
+        self.assertTrue(success, "must raise AssertionError when instance doesn't have frame 0")
 
         dqm.frames = mat[:, :, np.newaxis]
         dqm.estimate_mean_row_distance()
@@ -375,9 +377,9 @@ class DQMTests(unittest.TestCase):
         self.assertTrue(success, 'multiplying raw data by 100 must multiply estimated mean by 100')
 
         # test that, with a different random seed, estimated mean is still close the same value
-        dqm.estimate_mean_row_distance(0.01, 1e4, 17)
+        dqm.estimate_mean_row_distance(0.01, 17)
         mu3 = dqm.mean_row_distance
-        success = np.isclose(mu3 / mu1, test_factor, rtol=0.01, atol=0.01)
+        success = np.isclose(mu3 / mu1, test_factor, rtol=0.02, atol=0.02)
         self.assertTrue(success, 'running with a different random seed must produce a similar estimated mean')
     # end method test_estimate_mean_row_distance
 
@@ -422,33 +424,33 @@ class DQMTests(unittest.TestCase):
 
         # test that a 2-D matrix returns no stopped row numbers
         frames = rng.random((num_rows, num_cols))
-        stopped_row_nums = dqm.stopped_row_nums(frames)
+        stopped_row_nums = dqm._stopped_row_nums(frames)
         success = stopped_row_nums == []
         self.assertTrue(success, '2-D matrix must produce no stopped row numbers')
 
         # test that a 3-D array with 1 slice in dim 3 returns no stopped row numbers
         frames = frames[:, :, np.newaxis]  # convert to 3-D array
-        stopped_row_nums = dqm.stopped_row_nums(frames)
+        stopped_row_nums = dqm._stopped_row_nums(frames)
         success = stopped_row_nums == []
         self.assertTrue(success, '3-D array with 1 slice in dim 3 must produce no stopped row numbers')
 
         # test that a 3-D array with 2 identical slices in dim 3 returns all row numbers as stopped
         frames = np.concatenate((frames, frames), axis=2)
-        stopped_row_nums = dqm.stopped_row_nums(frames)
+        stopped_row_nums = dqm._stopped_row_nums(frames)
         success = stopped_row_nums == list(range(num_rows))
         self.assertTrue(success, '3-D array with 2 identical slices in dim 3 must return all row numbers as stopped')
 
         # test that changing a single row causes that row to no longer be seen as stopped
         changed_row_num = 17
         frames[changed_row_num, :, -1] = rng.random(num_cols)
-        stopped_row_nums = dqm.stopped_row_nums(frames)
+        stopped_row_nums = dqm._stopped_row_nums(frames)
         not_stopped_row_nums = list(set(range(num_rows)).difference(set(stopped_row_nums)))
         success = np.array_equal(not_stopped_row_nums, [changed_row_num])
         self.assertTrue(success, 'changed row must not be seen as stopped')
 
         # test that method uses stored frames correctly
         dqm.frames = frames
-        stopped_row_nums = dqm.stopped_row_nums()
+        stopped_row_nums = dqm._stopped_row_nums()
         not_stopped_row_nums = list(set(range(num_rows)).difference(set(stopped_row_nums)))
         success = np.array_equal(not_stopped_row_nums, [changed_row_num])
         self.assertTrue(success, 'stopped_row_nums must use stored frames correctly')
@@ -505,11 +507,11 @@ class DQMTests(unittest.TestCase):
         success = dqm.frames.shape[2] == num_frames_to_build + 1
         self.assertTrue(success, 'build_frames must return all built frames when pare_frames is False')
 
-        # test that passing in frame 1 separately produces same result
+        # test that passing in frame 0 separately produces same result
         dqm.clear_frames()
         frames2 = dqm.build_frames(num_frames_to_build, dqm.frames)
         success = np.array_equal(frames1, frames2)
-        self.assertTrue(success, 'build_frames must produce same result when frame 1 is passed in as a method argument')
+        self.assertTrue(success, 'build_frames must produce same result when frame 0 is passed in as a method argument')
     # end method test_build_frames
 
 
@@ -607,18 +609,17 @@ class DQMTests(unittest.TestCase):
         num_cols = 500
         dqm.raw_data = rng.random((num_rows, num_cols))
         dqm.run_pca()
-        dqm.pca_var_threshold = 0.7
-        dqm.choose_num_pca_dims_by_variance()
+        num_pca_dims = 80
 
         # test that 'in-sample' subspace projection norm proportions are within expected range
-        norm_props = dqm.pca_projection()
+        norm_props = dqm.pca_projection(num_pca_dims=num_pca_dims)
         success = np.min(norm_props) > 0.7 and np.max(norm_props) < 0.9
         self.assertTrue(success, "'in-sample' projection norm proportions must be within expected range")
 
         # test that 'out-of-sample' subspace projection norm proportions are within expected range
         num_new_rows = 15
         dat_new = rng.random((num_new_rows, num_cols))
-        norm_props_new = dqm.pca_projection(dat_new)
+        norm_props_new = dqm.pca_projection(dat_new, num_pca_dims=num_pca_dims)
         success = np.min(norm_props_new) > 0.3 and np.max(norm_props_new) < 0.5
         self.assertTrue(success, "'out-of-sample' projection norm proportions must be within expected range")
     # end method test_pca_projection
@@ -647,7 +648,7 @@ class DQMTests(unittest.TestCase):
         new_oos_rows = 20
         dat_raw_oos = rng.random((new_oos_rows, num_cols))
 
-        norm_props_is, norm_props_oos, overlaps_is, overlaps_oos, frames_oos = dqm.run_new_points(dat_raw_oos)
+        frames_oos, overlaps_is, overlaps_oos, norm_props_is, norm_props_oos = dqm.run_new_points(dat_raw_oos)
 
         # test that subspace-projection norm proportions fall within the expected ranges
         success = np.min(norm_props_is) > 0.52 and np.max(norm_props_is) < 0.9995 and \
@@ -664,7 +665,7 @@ class DQMTests(unittest.TestCase):
         last_frame_all = np.concatenate((dqm.frames[:, :, -1], frames_oos[:, :, -1]), axis=0)
         is_row_nums = list(range(num_rows))
         oos_row_nums = list(range(num_rows, last_frame_all.shape[0]))
-        clusters, cluster_sizes = extract_manifolds(last_frame_all, 0.001)
+        clusters, cluster_sizes = get_clusters(last_frame_all, 0.001)
         # select clusters that have any out-of-sample points
         oos_clusters = [cluster for cluster in clusters if any([x in oos_row_nums for x in cluster])]
         # find count of in-sample rows in each out-of-sample cluster
@@ -719,11 +720,11 @@ class DQMTests(unittest.TestCase):
         dqm1.raw_data = dat_raw
         dqm2.raw_data = dat_raw
 
-        # test that frame 1 matches
+        # test that frame 0 matches
         dqm1.create_frame_0()
         dqm2.create_frame_0()
         success = np.allclose(dqm1.frames, dqm2.frames)
-        self.assertTrue(success, 'frame 1 must match for call_c=True and call_c=False')
+        self.assertTrue(success, 'frame 0 must match for call_c=True and call_c=False')
 
         # test that same basis rows are chosen (choose_basis_by_distance_single_chunk calls
         # ChooseBasisByDistanceC or choose_basis_by_distance_python)

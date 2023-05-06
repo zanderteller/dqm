@@ -22,8 +22,8 @@ def biggest_outlier(rows):
     neighbor that is farthest away).  we do this the simple, brute-force way, comparing every row to
     every other row.
 
-    :param rows: matrix of rows
-    :return: row number of biggest outlier
+    :param rows: Matrix of rows
+    :return: Row number of biggest outlier
     '''
 
     num_rows, num_cols = rows.shape
@@ -56,10 +56,10 @@ def choose_basis_by_distance_python(rows, basis_size, first_basis_row_num):
     '''
     same functionality as ChooseBasisByDistanceC, but all in Python
 
-    :param rows: matrix of rows to choose from
-    :param basis_size: number of basis rows to choose
-    :param first_basis_row_num: first basis row (if < 0, we start with the biggest outlier)
-    :return: array of selected basis_row_nums
+    :param rows: Matrix of rows to choose from
+    :param basis_size: Number of basis rows to choose
+    :param first_basis_row_num: First basis row (if < 0, we start with the biggest outlier)
+    :return: Array of selected basis_row_nums
     '''
 
     num_rows, num_cols = rows.shape
@@ -104,10 +104,10 @@ def build_overlaps_python(sigma, basis_rows, rows):
     '''
     same functionality as BuildOverlapsC, but all in Python
 
-    :param sigma: sigma
-    :param basis_rows: matrix of basis rows
-    :param rows: matrix of other rows
-    :return: 1-D array of basis overlap for each 'other' row
+    :param sigma: Value for sigma
+    :param basis_rows: Matrix of basis rows
+    :param rows: Matrix of other rows
+    :return: Vector of basis overlap for each 'other' row
     '''
 
     basis_overlaps = build_overlaps(basis_rows, basis_rows, sigma)
@@ -129,15 +129,14 @@ def make_operators_python(mat, n_basis, n_potential, sigma, step, mass):
     '''
     same functionality as MakeOperatorsC, but all in Python
 
-    :param mat: the frame-1 matrix
-    :param n_basis: use this number of rows for the basis, starting from the first row.  if None, we use all rows.
-    :param n_potential: use this number of rows to use to build the potential, starting from the first row.
+    :param mat: The frame-0 matrix
+    :param n_basis: Use this number of rows for the basis, starting from the first row.  if None, we use all rows.
+    :param n_potential: Use this number of rows to use to build the potential, starting from the first row.
         if None, we use all rows.
-    :param sigma: sigma
-    :param step: step
-    :param mass: mass
-
-    :return: tuple of (simt, xops, exph)
+    :param sigma: Value for sigma
+    :param step: Value for step
+    :param mass: Value for mass
+    :return: A tuple of (simt, xops, exph)
     '''
 
     num_rows = mat.shape[0]
@@ -155,9 +154,18 @@ def make_operators_python(mat, n_basis, n_potential, sigma, step, mass):
 # end function make_operators_python
 
 
-# return a <num_rows_1 x num_rows_2> matrix with the overlaps of each row from rows_1 with
-# each row from rows_2
 def build_overlaps(rows_1, rows_2, sigma):
+    '''
+    Return a <num_rows_1 x num_rows_2> matrix with the pairwise Gaussian overlap (inner product) of each row
+    from rows_1 with each row from rows_2.
+
+    :param rows_1: A matrix of rows.
+    :param rows_2: A matrix of rows.
+    :param sigma: Value of sigma.
+    :return: A <num_rows_1 x num_rows_2> matrix with the pairwise Gaussian overlap (inner product) of each row
+        from rows_1 with each row from rows_2.
+    '''
+
     num_cols = rows_1.shape[1]
     assert rows_2.shape[1] == num_cols, 'number of columns must be the same'
 
@@ -176,6 +184,17 @@ def build_overlaps(rows_1, rows_2, sigma):
 
 
 def build_simt(overlaps):
+    '''
+    Build and return the transpose of the 'similarity' matrix (used to convert state vectors from the 'raw' basis
+    to the eigenbasis).
+
+    Note that the returned matrix may not be square, because the number of eigenbasis states may be smaller than
+    the number of basis rows.
+
+    :param overlaps: Square symmetric matrix of basis-basis overlaps.
+    :return: A <num eigenbasis states x num basis rows> matrix.
+    '''
+
     # note: use eigh instead of eig because we know the basis-overlap matrix is symmetric.
     # eigh is faster and guarantees the eigenvalues are returned in ascending order of magnitude
     eigenvals, eigenvecs = np.linalg.eigh(overlaps)
@@ -215,6 +234,15 @@ def build_simt(overlaps):
 
 
 def build_position_operators(basis_rows, overlaps, simt):
+    '''
+    Build and return the 3-D position-operator tensor.
+
+    :param basis_rows: Matrix of the basis rows.
+    :param overlaps: Square symmetric matrix of the basis-basis overlaps.
+    :param simt: Transpose of the 'similarity' matrix.
+    :return: A 3-D array, where slice i in 3rd dimension is the position-expectation operator matrix for data
+        dimension i. Dimensions: <num basis vectors x num basis vectors x num dims>.
+    '''
 
     num_rows, num_cols = basis_rows.shape
 
@@ -240,6 +268,16 @@ def build_position_operators(basis_rows, overlaps, simt):
 
 
 def build_raw_potential(rows, basis_rows, overlaps, sigma):
+    '''
+    Build and return the 'raw' potential matrix.
+
+    :param rows: Matrix of all rows.
+    :param basis_rows: Matrix of basis rows.
+    :param overlaps: Square symmetric matrix of basis-basis overlaps.
+    :param sigma: Value of sigma.
+    :return: a <num basis rows x num basis rows> matrix of the potential calculated at every basis-basis midpoint.
+    '''
+
     # calculate coordinates of all pairwise basis-basis midpoints (<n x n x num_dims>)
     # reshape 2 copies of the basis rows to broadcast them across each other
     num_basis_rows, num_cols = basis_rows.shape
@@ -283,6 +321,19 @@ def build_raw_potential(rows, basis_rows, overlaps, sigma):
 
 
 def build_hamiltonian(basis_rows, overlaps, simt, v0, sigma, step, mass):
+    '''
+    Build and return the 'evolution' (that is, the exponentiated Hamiltonian time-evolution) operator matrix.
+
+    :param basis_rows: Matrix of basis rows.
+    :param overlaps: Square symmetric matrix of basis-basis overlaps.
+    :param simt: Transpose of the 'similarity' matrix.
+    :param v0: The initial-potential matrix.
+    :param sigma: Value of sigma.
+    :param step: Value of step.
+    :param mass: Value of mass.
+    :return: A complex-valued <num basis vectors x num basis vectors> matrix.
+    '''
+
     # calculate all pairwise basis-basis squared distances (<n x n>)
     num_rows, num_cols = basis_rows.shape
     # reshape 2 copies of the basis rows to broadcast them across each other
@@ -316,13 +367,18 @@ def build_hamiltonian(basis_rows, overlaps, simt, v0, sigma, step, mass):
 # end method build_hamiltonian
 
 
-# exponentiate the hamiltonian from time 0 to time 'step'
-#
-# to simplify exponentiation of the Hamiltonian matrix, we find the eigenvalues and eigenvectors, exponentiate
-# the eigenvalues along the diagonal of a matrix (with zeros elsewhere), then use the eigenvectors to convert
-# the matrix back to the original representation.
-#
 def build_hamiltonian_exp_iter(h, step):
+    '''
+    Exponentiate the Hamiltonian from time 0 to time 'step'.
+
+    To simplify exponentiation of the Hamiltonian matrix, we find the eigenvalues and eigenvectors, exponentiate
+    the eigenvalues along the diagonal of a matrix (with zeros elsewhere), then use the eigenvectors to convert
+    the matrix back to the original representation.
+
+    :param h: The initial Hamiltonian matrix.
+    :param step: Value of step.
+    :return: A complex-valued <num basis vectors x num basis vectors> matrix.
+    '''
 
     # note: use eigh instead of eig because we know the matrix is symmetric.
     # eigh is faster and guarantees the eigenvalues are returned in ascending order of magnitude
@@ -349,16 +405,16 @@ def build_frames_python(num_frames_to_build, current_frame, basis_rows, simt, xo
     '''
     same functionality as BuildFramesAutoC, but all in Python
 
-    :param num_frames_to_build: number of new frames to build
-    :param current_frame: current last frame, from which we build new frames
-    :param basis_rows: matrix of basis rows
-    :param simt: 'similarity' matrix
-    :param xops: tensor of position operators
-    :param exph: hamiltonian evolution operators
-    :param sigma: sigma
-    :param stopping_threshold: stopping threshold
+    :param num_frames_to_build: Number of new frames to build.
+    :param current_frame: Current last frame, from which we build new frames.
+    :param basis_rows: Matrix of basis rows.
+    :param simt: Transpose of 'similarity' matrix.
+    :param xops: 3-D tensor of position-operator matrices.
+    :param exph: Hamiltonian 'evolution' operator matrix.
+    :param sigma: Value of sigma.
+    :param stopping_threshold: Value of stopping threshold.
 
-    :return: 3-D array of new_frames
+    :return: 3-D array of new_frames.
     '''
 
     num_rows, num_cols = current_frame.shape
@@ -383,14 +439,6 @@ def build_frames_python(num_frames_to_build, current_frame, basis_rows, simt, xo
             new_states = combo_op @ overlap_vecs
 
             # normalize new states
-            # 2FIX: DISCUSS W/ MARVIN THE PHYSICAL SIGNIFICANCE OF HAVING TO RENORMALIZE THE EVOLVED
-            # STATES, THEN EXPLAIN IT HERE
-            # ANSWER: NON-BASIS OVERLAP RECONSTRUCTIONS ARE NOT NORMALIZED, WHICH IS WHY THESE EVOLVED
-            # STATES ARE NOT NORMALIZED
-            # 2TEST: IS THIS STILL AN ISSUE WHEN USING A FULL BASIS?  (MARVIN THINKS NOT, I WANT TO CHECK)
-            # 2TEST: HOW TO DIRECTLY VERIFY THAT STEP=0 DELTAS ARE NEGLIGIBLE COMPARED TO THE STEP>0
-            # DELTAS UNDER NORMAL CIRCUMSTANCES?  (AND HOW MUCH DOES IT MATTER WHETHER OR NOT THIS
-            # RENORMALIZATION STEP IS TURNED ON?)
             new_states /= np.linalg.norm(new_states, axis=0)
 
             # get new expected position for each evolved state
@@ -418,6 +466,14 @@ def build_frames_python(num_frames_to_build, current_frame, basis_rows, simt, xo
 
 
 def expected_positions(states, xops):
+    '''
+    Calculate and return new expected positions for a set of evolved states.
+
+    :param states: A <num basis vectors x num rows> matrix of evolved states in the eigenbasis.
+    :param xops: 3-D tensor of position-operator matrices.
+    :return: A <num rows x num dims> matrix of expected positions for the evolved states.
+    '''
+
     num_states = states.shape[1]
     num_dims = xops.shape[2]
     positions = np.zeros((num_states, num_dims))

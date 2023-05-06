@@ -1,14 +1,18 @@
 Quick Start
 ===========
 
-This Quick Start guide is best experienced interactively as a Jupyter notebook (`notebooks/quick_start.ipynb  <https://github.com/zanderteller/dqm/blob/main/notebooks/quick_start.ipynb>`_ in the DQM repository), but the same content is reproduced here.
+This Quick Start guide is best experienced interactively as a Jupyter notebook (``notebooks/quick_start.ipynb`` in the DQM repository), but the same content is reproduced here.
 
-Dynamic Quantum Mapping (DQM) is a unique system designed for exploring and understanding the intrinsic structure of high-dimensional numerical data. DQM works on any given data set by creating a high-dimensional data-density map and then moving data points toward nearby regions of higher data density. No assumptions are made about the underlying structure of the data. Visual and numerical analysis of the resulting animated 'evolution' of the data can reveal both clusters and extended structures, leading to a rich understanding of relationships between different subsets of the data.
+Dynamic Quantum Mapping (DQM) is a unique system designed for exploring and understanding the intrinsic structure of high-dimensional numerical data. DQM works on any given data set by creating a high-dimensional data-density map and then moving data points toward nearby regions of higher data density. No assumptions are made about the underlying structure of the data. Visual and numerical analysis of the resulting animated 'evolution' of the data can reveal both clusters and extended structures, leading to a rich understanding of relationships between and within different subsets of the data.
 
 This quick-start guide will introduce DQM using a very simple example data set. The example set is simple enough to understand entirely *without* DQM, making it easier to develop your understanding of what DQM is doing and how to interpret DQM results.
 
+(*Note: there's also another demo Jupyter notebook, using DQM on real data, in* ``notebooks/demo_real_data_1.ipynb`` *in the DQM repository.*)
+
 Update Your PYTHONPATH
 ----------------------
+
+(*See the* :doc:`full installation instructions <installation>` *if you need them.*)
 
 First, make sure the 'dqm' package is in your PYTHONPATH. If it isn't already, you can uncomment the code below and edit as needed.
 
@@ -28,7 +32,7 @@ Import what we need.
 .. code-block::
 
     import numpy as np
-    from dqm import DQM, plot_frames, smooth_frames, extract_manifolds
+    from dqm import DQM, plot_frames, smooth_frames, get_clusters
 
     # import PyPlot for some basic plotting
     import matplotlib.pyplot as plt
@@ -107,7 +111,7 @@ Each row of the color matrix contains RGB data for the corresponding row in 'dat
 
 The :func:`plot_frames <dqm.utils.plot_frames>` function below uses the first 3 columns of the input matrix by default. (By construction of our example data set, plotting any 3 raw dimensions here will produce similar results.)
 
-The plot is interactive -- click and drag to rotate.
+The plot is interactive (not here -- in the Jupyter notebook, or wherever you're running the code). Click and drag to rotate the plot.
 
 .. code-block::
 
@@ -119,7 +123,7 @@ The plot is interactive -- click and drag to rotate.
     cluster_colors[3*num_points_per_cluster:4*num_points_per_cluster, :] = np.array([0.7, 0.7, 0.7])  # cluster 3 is gray
 
     # plot the first 3 columns of 'dat'
-    plot_frames(dat, color=cluster_colors)
+    plot_frames(dat, color=cluster_colors, title='Example Data Set: First 3 Raw Dimensions')
 
 .. image:: images/quick_start_first_3_raw_dims.png
    :align: center
@@ -155,7 +159,7 @@ Understanding the plots (left to right):
 
 * Plot 1: PCA eigenvalues are normalized by dividing all of them by the first (largest) one. Note that PCA eigenvalues are proportional to the variance of the data in each PCA dimension.
 * Plot 2: Log10 of the normalized PCA eigenvalues from Plot 1. (In some cases, this plot may be more useful than Plot 1.)
-* Plot 3: Proportion of cumulative variance in the data for the first $N$ PCA dimensions. This plot is just the (renormalized) cumulative sum of the PCA eigenvalues (from Plot 1).
+* Plot 3: Proportion of cumulative variance in the data for the first :math:`n` PCA dimensions. This plot is just the (renormalized) cumulative sum of the PCA eigenvalues (from Plot 1).
 
 .. code-block::
 
@@ -198,7 +202,7 @@ Creating frame 0 means:
 
 .. code-block::
 
-    dqm.pca_transform = True  # default True (if false, frame 0 will be a copy of the raw data)
+    dqm.pca_transform = True  # default True (if False, frame 0 will be a copy of the raw data)
     dqm.create_frame_0()
 
     print("In the DQM instance, 'frames' (which now stores frame 0) has shape:", dqm.frames.shape)
@@ -210,7 +214,7 @@ In this plot the first 3 dimensions are now PCA dimensions, not raw dimensions, 
 
 .. code-block::
 
-    plot_frames(dqm.frames, color=cluster_colors)
+    plot_frames(dqm.frames, color=cluster_colors, title='Example Data Set: First 3 PCA Dimensions')
 
 .. image:: images/quick_start_first_3_pca_dims.png
    :align: center
@@ -218,9 +222,9 @@ In this plot the first 3 dimensions are now PCA dimensions, not raw dimensions, 
 Choose a Basis
 --------------
 
-The 'basis' is a subset of data points that we choose. These basis points will be used to represent all other data points and will form the core of all DQM calculations. (The word 'basis' here is referencing the idea from linear algebra; see the technical summary *Understanding DQM* for the technical details.)
+The 'basis' is a subset of data points that we choose. These basis points will be used to represent all other data points and will form the core of all DQM calculations. (*The word 'basis' here is referencing the idea from linear algebra; see the technical summary* `Understanding DQM <https://github.com/zanderteller/dqm/blob/main/docs/Understanding%20DQM.pdf>`_ *for the technical details.*)
 
-The size of the basis (i.e., the number of basis points) sets a 'resolution' for how much detail we can see in the landscape. A large basis is very computationally expensive (building frames is approximately $O(n^3)$), so in order to use DQM efficiently:
+The size of the basis (i.e., the number of basis points) sets a 'resolution' for how much detail we can see in the landscape. A large basis is very computationally expensive (building frames is approximately :math:`O(n^3)`), so in order to use DQM efficiently:
 
 * Start with a smaller basis as you begin exploring a data set.
 * Increase the basis size later when you need greater resolution.
@@ -255,7 +259,7 @@ Plot frame 0 again, this time highlighting the basis rows in orange.
     basis_sizes = 7 * np.ones(num_rows)
     basis_sizes[dqm.basis_row_nums] = 10  # make basis-row points bigger
 
-    plot_frames(dqm.frames, color=basis_colors, size=basis_sizes)
+    plot_frames(dqm.frames, color=basis_colors, size=basis_sizes, title='Example Data Set: First 3 PCA Dimensions, Highlighting Basis Rows')
 
 .. image:: images/quick_start_first_3_pca_dims_basis_rows.png
    :align: center
@@ -286,7 +290,7 @@ For any non-basis point, the 'overlap' of that point in the basis is a measure o
 
 Overlap for a given data point is always between 0 and 1, with 1 being a perfect representation. (All basis points have overlap of 1 in the basis.)
 
-See the *DQM User Guide* for more about basis overlap. (For full technical details, see the section on "Reconstruction of Wave Functions in the Eigenbasis" in the technical summary *Understanding DQM*.)
+See the :ref:`User Guide <Choosing a Basis>` for more about basis overlap. (*For full technical details, see the section on "Reconstruction of Wave Functions in the Eigenbasis" in the technical summary* `Understanding DQM <https://github.com/zanderteller/dqm/blob/main/docs/Understanding%20DQM.pdf>`_.)
 
 **Minimum 'Good' Sigma**
 
@@ -338,14 +342,14 @@ The operators depend on the raw data, the choice of basis, and the DQM parameter
 
 *DQM has 3 main parameters: sigma, mass, and step. Mass and step are both for advanced use only; we don't worry about them here.*
 
-See the `User Guide <user_guide.html#building-operators>`_ and the technical summary *Understanding DQM* for more about the DQM operators.
+See the :ref:`User Guide <Building Operators>` and the technical summary `Understanding DQM <https://github.com/zanderteller/dqm/blob/main/docs/Understanding%20DQM.pdf>`_ for more about the DQM operators.
 
 .. code-block::
 
     dqm.build_operators()
 
     print()
-    print("The 'similarity' matrix (for converstion of state vectors from raw basis to eigenbasis) has shape:", dqm.simt.shape)
+    print("The transpose of the 'similarity' matrix (for converstion of state vectors from raw basis to eigenbasis) has shape:", dqm.simt.shape)
     print("The position-expectation operator tensor has shape:", dqm.xops.shape)
     print("The evolution operator has shape:", dqm.exph.shape)
 
@@ -363,9 +367,12 @@ Our next step (below) will be to increase sigma a bit, to get 'clean' formation 
 .. code-block::
 
     dqm.build_frames(50)  # default 100
-    print('dqm.frames has shape:', dqm.frames.shape)
 
-    plot_frames(dqm.frames, color=cluster_colors)
+    print()
+    print('dqm.frames has shape:', dqm.frames.shape)
+    print()
+
+    plot_frames(dqm.frames, color=cluster_colors, title='Example Data Set: Sigma=2.5')
 
 .. image:: images/quick_start_sigma2p5_frame50.png
    :align: center
@@ -396,7 +403,7 @@ Here's what we need to do:
 
     print("shape of 'frames' in the DQM instance is now:", dqm.frames.shape)
 
-    plot_frames(dqm.frames, color=cluster_colors)
+    plot_frames(dqm.frames, color=cluster_colors, title='Example Data Set: Sigma=2.9')
 
 .. image:: images/quick_start_sigma2p9_frame60.png
    :align: center
@@ -430,7 +437,7 @@ These observations are just a first taste of how the DQM evolution (not just the
 
     # Note: the 'skip_frames=3' argument means only every 3rd frame is plotted. When dealing
     # with a large number of frames, this can keep the plotting routine from getting too slow.
-    plot_frames(dqm.frames, color=cluster_colors, skip_frames=3)
+    plot_frames(dqm.frames, color=cluster_colors, skip_frames=3, title='Example Data Set: Sigma=3.9')
 
 .. image:: images/quick_start_sigma3p9_frame30.png
    :align: center
@@ -442,41 +449,39 @@ In the plot above, the evolution is really over by frame 400. (Things are still 
 
 This is not a horrible state of affairs, but DQM does provide 2 fixes for this problem:
 
-#. You can increase the value of the `stopping_threshold` instance variable before building frames. It's usually set automatically (to `mean_row_distance` / 1e6). Increasing it will cause points to stop sooner.
-#. The `smooth_frames` function below creates a new set of frames, interpolated from the input frames, designed to target a constant average speed of moving points throughout the evolution.
+#. You can increase the value of the ``dqm.stopping_threshold`` instance variable before building frames. (A point is considered to have stopped if it moves less then ``stopping_threshold`` distance from one frame to the next.) It's usually set automatically (to ``mean_row_distance / 1e6``). Increasing it will cause points to stop sooner.
+#. The :func:`smooth_frames <dqm.utils.smooth_frames>` function below creates a new set of frames, interpolated from the input frames, designed to target a constant average speed of moving points throughout the evolution.
 
 .. code-block::
 
-    plot_frames(smooth_frames(dqm.frames), color=cluster_colors)
+    plot_frames(smooth_frames(dqm.frames), color=cluster_colors, title='Example Data Set: Sigma=3.9, Smoothed Frames')
 
 .. image:: images/quick_start_sigma3p9_smoothedframe60.png
    :align: center
 
-Using extract_manifolds
------------------------
+Using get_clusters
+------------------
 
-The :func:`extract_manifolds <dqm.utils.extract_manifolds>` function returns groups of rows that are near each other. A group can be 'near each other' in various ways, for instance in a very long chain. (This is why this function is *not* called 'extract_clusters'.) The logic in :func:`extract_manifolds <dqm.utils.extract_manifolds>` is somewhat like a simplified version of `DBSCAN <https://en.wikipedia.org/wiki/DBSCAN>`_.
+The :func:`get_clusters <dqm.utils.get_clusters>` function returns groups of rows that are near each other. A group can be 'near each other' in various ways, for instance in a very long chain. The logic in :func:`get_clusters <dqm.utils.get_clusters>` is somewhat like a simplified version of `DBSCAN <https://en.wikipedia.org/wiki/DBSCAN>`_. (*See the* :func:`get_clusters <dqm.utils.get_clusters>` *documentation for more details.*)
 
 Here (below) we extract:
 
 * the row numbers for the 4 individual clusters from frame 30
 * the row numbers for the 2 superclusters from the last frame
 
-Note: for extracting the 4 individual clusters from frame 30, the value for the ``max_dist`` parameter of :func:`extract_manifolds <dqm.utils.extract_manifolds>` (dividing the mean row distance by 8) had to be tweaked rather carefully. This is another good example of the power of visualizing the DQM evolution, which let us know that separating the 4 individual clusters around frame 30 would even be possible.
+Note: for extracting the 4 individual clusters from frame 30, the value for the ``max_dist`` parameter of :func:`get_clusters <dqm.utils.get_clusters>` (dividing the mean row distance by 8) had to be tweaked rather carefully. This is another good example of the power of visualizing the DQM evolution, which let us know that separating the 4 individual clusters around frame 30 would even be possible.
 
 .. code-block::
 
     # use frame 30 to extract the 4 individual clusters
-    cluster_manifold_row_nums, cluster_manifold_sizes = extract_manifolds(dqm.frames[:, :, 30],
-                                                                          dqm.mean_row_distance / 8)
-    print('Found these cluster manifold sizes:', cluster_manifold_sizes)
+    cluster_row_nums, cluster_sizes = get_clusters(dqm.frames[:, :, 30], dqm.mean_row_distance / 8)
+    print('Found these cluster sizes:', cluster_sizes)
 
     print()
 
     # use last frame to extract the 2 superclusters
-    supercluster_manifold_row_nums, supercluster_manifold_sizes = extract_manifolds(dqm.frames[:, :, -1],
-                                                                                    dqm.mean_row_distance / 1000)
-    print('Found these supercluster manifold sizes:', supercluster_manifold_sizes)
+    supercluster_row_nums, supercluster_sizes = get_clusters(dqm.frames[:, :, -1], dqm.mean_row_distance / 1000)
+    print('Found these supercluster sizes:', supercluster_sizes)
 
 Using run_simple
 ----------------
@@ -498,13 +503,13 @@ Here (below) we'll use the :meth:`run_simple <dqm.DQM.run_simple>` method to ver
 
 Be aware of the default behavior of :meth:`run_simple <dqm.DQM.run_simple>` (unless you change settings in the instance before you call the method):
 
-* It does a PCA transformation and keeps *all* PCA dimensions.
+* It does a PCA transformation and keeps all PCA dimensions.
 * It uses a 'full' basis (all data points are in the basis).
 
 .. code-block::
 
     # get row numbers for the first supercluster
-    row_nums = supercluster_manifold_row_nums[0]
+    row_nums = supercluster_row_nums[0]
 
     # subselect data and color matrices
     sc1_dat = dat[row_nums, :]
@@ -518,7 +523,7 @@ Be aware of the default behavior of :meth:`run_simple <dqm.DQM.run_simple>` (unl
     print('sc1_dqm.frames has shape:', sc1_dqm.frames.shape)
     print()
 
-    plot_frames(sc1_dqm.frames, color=sc1_cluster_colors)
+    plot_frames(sc1_dqm.frames, color=sc1_cluster_colors, title='Example Data Set: Supercluster 1, Sigma=2.0')
 
 .. image:: images/quick_start_sc1_sigma2p0_frame20.png
    :align: center
@@ -530,6 +535,7 @@ You've now seen the most important core elements in DQM's operation and some of 
 
 For more information, see:
 
+* the **Demo: Real Data #1** Jupyter notebook (in ``notebooks/demo_real_data_1.ipynb`` in the DQM repository)
 * the :doc:`user_guide`
 * the technical summary `Understanding DQM <https://github.com/zanderteller/dqm/blob/main/docs/Understanding%20DQM.pdf>`_
 

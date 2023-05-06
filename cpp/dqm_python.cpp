@@ -28,10 +28,10 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReser
 
 extern "C"
 {
-	DLLEXPORT void ExtractManifoldsC(double* mat, int num_rows, int num_cols, double max_dist, int* cluster_idxs)
+	DLLEXPORT void GetClustersC(double* mat, int num_rows, int num_cols, double max_dist, int* cluster_idxs)
 	{
-		ExtractManifolds(mat, num_rows, num_cols, max_dist, cluster_idxs);
-	} // end function ExtractManifoldsC
+		GetClusters(mat, num_rows, num_cols, max_dist, cluster_idxs);
+	} // end function GetClustersC
 
 	DLLEXPORT void NearestNeighborsC(double* mat, int num_rows, int num_cols, int* nn_row_nums, double* nn_dists)
 	{

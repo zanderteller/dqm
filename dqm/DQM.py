@@ -83,12 +83,12 @@ class DQM:
         Default None.
     :ivar mass: Value of mass assigned to each data point during DQM evolution. Typically set manually by the
         user less often than sigma (see method 'default_mass_for_num_dims'). Default None.
-    :ivar step: Time step used during DQM evolution. Typically set manually rarely or never by the user.
+    :ivar step: Time step used during DQM evolution. Typically set manually by the user rarely or never.
         Default 0.1.
 
     Instance variables (DQM operators):
 
-    :ivar  simt: Stored transpose of the 'similarity' matrix, used to converted state vectors from the 'raw'
+    :ivar  simt: Stored transpose of the 'similarity' matrix, used to convert state vectors from the 'raw'
         basis to the orthonormal basis of eigenstates. Default None.
     :ivar xops: Stored 3-D array of position-expectation operator matrices. (Each slice in 3rd dim is the
         operator matrix for the corresponding column/dimension in 2nd dim in 'frames'.)
@@ -101,21 +101,21 @@ class DQM:
         moves less than this distance from one frame to the next frame. Typically is automatically set to
         mean_row_distance / 1e6, but can be set manually. Default None.
     :ivar frames: Stored 3-D array of frames: <num rows x num dims x num frames>. First slice in 3rd dim
-        contains the original data (possibly PCA rotated/truncated), stored here even before evolution
-        has taken place. Default None.
+        contains the original data (possibly PCA rotated/truncated), stored here before evolution has taken
+        place. Default None.
     '''
 
     '''
     Note on Passing Arrays to C Code
     
-    Numpy 'C-CONTIGUOUS' arrays are not actually row-major when they're 3-D -- it's dimension 3 that varies
-    most quickly, not dimension 2, in the underlying memory.  so, in order to give the C code the ordering
-    that it expects when passing a 3-D array, we need to put the column dimension in dimension 3, like so:
-    <num_slices x num_rows x num_cols>.  this way, dimension 2 (column) is varying most quickly, which is
-    what the C code expects (this is what 'row-major order' means). so now, when allocated memory is treated
-    as 1-dimensional by the C code, sequential writes fill up slice 1 first, row by row, then slice 2, etc.,
-    as desired. afterward, we permute the dimensions back again here in the Python code, to make the 3-D
-    array again the expected <num_rows x num_cols x num_slices>.
+    Numpy 'C-CONTIGUOUS' arrays are not actually row-major when they're 3-D -- it's the 3rd dimension that varies
+    most quickly, not the 2nd dimension, in the underlying memory. So, in order to give the C code the ordering
+    that it expects when passing a 3-D array, we need to put the column dimension in the 3rd dimension, like so:
+    <num_frames x num_rows x num_cols>. This way, the 2nd dimension (column) is varying most quickly, which is
+    what the C code expects (this is what 'row-major order' means). So now, when allocated memory is treated
+    as 1-dimensional by the C code, sequential writes fill up frame 0 first, row by row, then frame 1, etc.,
+    as desired. Afterward, we permute the dimensions back again here in the Python code, to make the 3-D
+    array again the expected <num_rows x num_cols x num_frames>.
     '''
 
 
@@ -133,12 +133,10 @@ class DQM:
         '''
 
         self.verbose = True
-        self.min_report_time = 10  # report execution times that are 10 seconds or longer
+        self.min_report_time = 10
 
         self.raw_data = None
 
-        # if false, call all-Python versions of the code (generally much slower but much easier to debug --
-        # see dqm_pure_python.py)
         if dqm_lib is None:
             print("## WARNING: in DQM constructor -- compiled-library code not found, setting 'call_c' to false")
             self.call_c = False
@@ -148,39 +146,21 @@ class DQM:
 
         ## for PCA
         # note: if pca_transform is false, all other PCA settings are ignored
-        self.pca_transform = True  # whether to do PCA rotation/projection of the data
-        # number of PCA dimensions to use in the rotated data matrix (if not None, takes precedence over
-        # pca_var_threshold)
+        self.pca_transform = True
         self.pca_num_dims = None
-        # minimum proportion of cumulative variance when choosing how many PCA dimensions to keep (ignored if
-        # (pca_num_dims is not None)
         self.pca_var_threshold = None
-        # store column means of raw data (needed for out-of-sample operations)
         self.raw_col_means = None
-        # vector of PCA eigenvalues (largest first)
         self.pca_eigvals = None
-        # matrix with PCA eigenvectors in the columns (columns correspond to entries in pca_eigvals)
         self.pca_eigvecs = None
-        # vector of cumulative proportional variance by PCA dimension (this is just the normalized
-        # cumulative sum of PCA eigenvalues -- eigenvalues are proportional to variance in each dimension)
         self.pca_cum_var = None
 
         ## for choosing and storing basis
-        # number of points to use in the basis
         self.basis_size = None
-        # for speed, basis can be chosen in multiple 'chunks' (i.e., a partition of the rows/points)
         self.basis_num_chunks = 1
-        # random seed used to choose a random starting point for the basis (ignored if basis_start_with_outlier
-        # is true)
         self.basis_rand_seed = 1
-        # whether to start with the single greatest outlier (will be very slow, O(n^2), for large numbers of points)
-        # if false, pick a random point to start with (using basis_rand_seed)
         self.basis_start_with_outlier = True
-        # list of basis row numbers
         self.basis_row_nums = None
-        # list of non-basis row numbers
         self.non_basis_row_nums = None
-        # matrix of basis rows from frame 0 (initial frame with points in initial positions)
         self.basis_rows = None
 
         ## for choosing sigma (see choose_sigma_for_basis)
@@ -188,25 +168,19 @@ class DQM:
         self.overlap_mean_threshold = 0.9
 
         ## main dqm parameters
-        self.sigma = None  # no default
+        self.sigma = None
+        self.mass = None
         self.step = 0.1
-        self.mass = None  # no default (see default_mass_for_num_dims)
 
-        # primarily useful for gauging scale for appropriate/useful values of sigma
         self.mean_row_distance = None
 
         ## dqm operators
-        # transpose of similarity matrix
         self.simt = None
-        # 3-D array of position-expectation operator matrices (each slice in 3rd dim is the operator matrix
-        # for the corresponding dimension)
         self.xops = None
-        # Hamiltonian time-evolution exponentiation operator matrix (the 'evolution' operator)
         self.exph = None
 
         ## frames
         self.stopping_threshold = None
-        # note: frame 0 is stored here (as 3-D array with 1 slice in 3rd dim), before any evolution has taken place
         self.frames = None
     # end __init__ constructor
 
@@ -216,9 +190,9 @@ class DQM:
         Use a simple heuristic formula (derived from random-data experiments) to return a suggested
         default value of mass for a given number of dimensions:
 
-        mass = -1 + 2 * log10(num_dims).
+        mass = -1 + 2 * log10(num_dims)
 
-        We set a minimum suggested mass of 1, which overrides the heuristic for small numbers of
+        We set a minimum default mass of 1, which overrides the heuristic for small numbers of
         dimensions (< 10), to avoid oscillation caused by a 'too transparent' landscape.
 
         Important note: for any given data set, the effective dimensionality of the data cloud might be
@@ -299,7 +273,7 @@ class DQM:
 
           * normalized eigenvalues (all divided by first eigenvalue)
           * log10 of normalized eigenvalues
-          * proportional cumulative variance (all divided by total variance)
+          * proportional cumulative variance of data (all divided by total variance of data)
 
         Note: an assertion will fail if the Matplotlib PyPlot module is not loaded.
 
@@ -384,7 +358,7 @@ class DQM:
     # end method _choose_num_pca_dims
 
 
-    def create_frame_0(self, dat_raw=None, num_pca_dims=None):
+    def create_frame_0(self, dat_raw=None, _num_pca_dims=None):
         '''
         Create frame 0 from raw data.
 
@@ -394,15 +368,15 @@ class DQM:
         If self.pca_transform is True, frame 0 will be the PCA-rotated/truncated coordinates of each row.
         Otherwise, frame 0 will simply be the raw data.
 
-        (If dat_raw is passed in and pca_transform is True, we apply the 'in-sample' PCA rotation/truncation
+        Note: if dat_raw is passed in and pca_transform is True, we apply the 'in-sample' PCA rotation/truncation
         derived originally from self.raw_data. It's important that any new 'out-of-sample' points be transformed
-        using the in-sample PCA transformation -- for more detail, see the discussion of running new points in
+        using the in-sample PCA transformation. (For more detail, see the discussion of running new points in
         the user guide.)
 
         :param dat_raw: A raw-data matrix.  if None, we use self.raw_data.  default None.
-        :param num_pca_dims: Only used by internal code -- use self.pca_num_dims and self.pca_var_threshold instead.
+        :param _num_pca_dims: ONLY USED BY INTERNAL CODE. Use self.pca_num_dims or self.pca_var_threshold instead.
             Default None.
-        :return: if 'dat_raw' was passed in, we return frame 0.  otherwise, we return None.
+        :return: If 'dat_raw' was passed in, we return frame 0.  otherwise, we return None.
         '''
 
         if dat_raw is None:
@@ -413,7 +387,7 @@ class DQM:
                 "must not already have multiple frames when creating frame 0 (use clear_frames to clear frames)"
 
             if self.pca_transform:
-                assert num_pca_dims is None, "'num_pca_dims' must not be passed in when building 'in-sample'" \
+                assert _num_pca_dims is None, "'_num_pca_dims' must not be passed in when building 'in-sample'" \
                                              "version of frame 0 from self.raw_data (use self.pca_num_dims or" \
                                              "self.pca_var_threshold)"
 
@@ -423,11 +397,11 @@ class DQM:
                     self.run_pca()
                 # end if PCA not run/stored yet
 
-                num_pca_dims = self._choose_num_pca_dims()
+                _num_pca_dims = self._choose_num_pca_dims()
             # end if using PCA transformation
 
             # create frame 0 based on self.raw_data and store in self.frames
-            self.frames = self.create_frame_0(self.raw_data, num_pca_dims)
+            self.frames = self.create_frame_0(self.raw_data, _num_pca_dims)
 
             return
         # end if using self.raw_data
@@ -439,14 +413,21 @@ class DQM:
             assert dat_raw.shape[1] == self.raw_col_means.size, "'dat_raw' must have the expected number of columns"
             dat = dat_raw - self.raw_col_means
 
+            # if _num_pca_dims is None, infer it from self.frames
+            if _num_pca_dims is None:
+                assert self.frames is not None and type(self.frames) is np.ndarray,\
+                    "'self.frames' must be an ndarray (when creating frame 0 for raw data passed in)"
+                _num_pca_dims = self.frames.shape[1]
+            # end if pca_num_dims is None
+
             # rotate and truncate using the specified number of PCA dimensions
-            if num_pca_dims > self.pca_eigvals.size:
+            if _num_pca_dims > self.pca_eigvals.size:
                 if self.verbose:
                     print('## WARNING: {} PCA dims requested, but only have {} -- using all {} PCA dimensions...'
-                          .format(num_pca_dims, self.pca_eigvals.size, self.pca_eigvals.size))
-                num_pca_dims = self.pca_eigvals.size
+                          .format(_num_pca_dims, self.pca_eigvals.size, self.pca_eigvals.size))
+                _num_pca_dims = self.pca_eigvals.size
             # end if too many PCA dims requested
-            eigvecs = self.pca_eigvecs[:, :num_pca_dims]
+            eigvecs = self.pca_eigvecs[:, :_num_pca_dims]
             # NOTE: numpy matrix multiplication seems to be really slow (sometimes?) for no good reason. if we
             # build each column of the final matrix separately and then cat them together, the whole thing goes
             # much faster.
@@ -459,7 +440,7 @@ class DQM:
 
             if self.verbose:
                 print('using {} of {} PCA dimensions ({:.1f}% of total variance)'.\
-                      format(num_pca_dims, self.pca_eigvals.size, 100 * self.pca_cum_var[num_pca_dims - 1]))
+                      format(_num_pca_dims, self.pca_eigvals.size, 100 * self.pca_cum_var[_num_pca_dims - 1]))
         else:
             # not doing PCA transformation -- just use raw data
             dat = dat_raw
@@ -478,7 +459,7 @@ class DQM:
 
     def clear_basis(self):
         '''
-        Clear instance variables storing information about the basis, including self.basis_size.
+        Clear instance variables storing information about the basis, INCLUDING self.basis_size.
 
         Use this method to clear a basis when you want to return to the default behavior of using
         all rows as the basis.
@@ -526,8 +507,8 @@ class DQM:
         If basis has not been set, we use all rows as the basis by default. (For large numbers of rows, this
         default will be unusably slow.)
 
-        Note: the relative order of the basis rows is baked into the operators, so the relative
-        ordering of the basis rows must not change later (when building frames).
+        Note: the relative order of the basis rows is baked into the operators, so the relative ordering of
+        the basis rows must not change later (when building frames).
 
         The operators are:
 
@@ -538,7 +519,7 @@ class DQM:
         * exph: Complex-valued 'evolution' operator matrix (the exponentiated time-evolution Hamiltonian operator
           matrix). Dimensions: <num basis vectors x num basis vectors>.
 
-        :param n_potential: Used mainly for debugging and speed testing. Use this number of rows to use to build
+        :param n_potential: USED MAINLY FOR DEBUGGING AND SPEED TESTING. Use this number of rows to build
             the potential, starting from the first row. If None, we use all rows (not just the basis rows).
             Default None.
         :return: None
@@ -734,7 +715,7 @@ class DQM:
 
         :param rows: Matrix of rows
         :param basis_size: Number of rows to select for the basis
-        :param rng: Numpy random-number generator (passed from choose_basis_by_distance).
+        :param rng: Numpy random-number generator
         :return: List of selected basis row numbers
         '''
 
@@ -772,9 +753,9 @@ class DQM:
         If 'rows' is passed in, we build overlaps for those rows. Otherwise, if row_nums is passed in,
         we build overlaps for those rows. Otherwise, we build overlaps for all non-basis rows.
 
-        Note: 'overlap' is a measure of how well a given data point is represented by the basis. Basis points
-        will all have an overlap of 1, meaning perfect representation. (For technical details, see the section
-        on "Reconstruction of Wave Functions in the Eigenbasis" in the technical-summary document "Understanding
+        'Overlap' is a measure of how well a given data point is represented by the basis. Basis points will
+        all have an overlap of 1, meaning perfect representation. (For technical details, see the section on
+        "Reconstruction of Wave Functions in the Eigenbasis" in the technical-summary document "Understanding
         DQM".)
 
         :param rows: 2-D array of data rows. Takes precedence if not None.  Default None.
@@ -937,8 +918,8 @@ class DQM:
         Choose the smallest value of sigma that meets overlap-threshold requirements (self.overlap_min_threshold
         and self.overlap_mean_threshold) for non-basis rows.
 
-        self must already have frame 0 and a selected basis that is smaller than the total number of rows (i.e.,
-        not a 'full' basis)
+        self must already have frame 0 (in self.frames) and a selected basis that is smaller than the total number
+        of rows (i.e., not a 'full' basis).
 
         We set self.sigma to the final resulting value of sigma.
 
@@ -1023,22 +1004,22 @@ class DQM:
         For the given row_nums, use a binary search to find the smallest value of sigma that meets
         overlap-threshold requirements (self.overlap_min_threshold and self.overlap_mean_threshold).
 
-        self must already have frame 0 and a selected basis.
+        self must already have frame 0 (in self.frames) and a selected basis.
 
         We determine precision of the search as follows:
 
-        * Estimate mean distance between rows by calling self.estimate_mean_row_distance
+        * Estimate mean distance between rows by calling self.estimate_mean_row_distance (if needed).
         * Set precision at least 2 orders of magnitude below the mean distance:
           precision = 10 ** (floor(log10(mean_distance)) - 2).
           For example, if mean distance is 20, precision will be 0.1.
         * Precision determines the smallest allowed step from one value of sigma to the next.
 
         The first search value for sigma is 10 * precision. If that first value of sigma is good, we divide
-        sigma by 2 until we find a vad value. (if the largest bad value of sigma is below the current
+        sigma by 2 until we find a bad value. (If the largest bad value of sigma is below the current
         precision level, we increase precision as needed.) If that first value of sigma is bad, we multiply
-        sigma by 2 until we find a good value. Then we proceed by binary search, until we have a bad value
-        and a good value within one precision step of each other.  the larger, good, value is the final
-        selected value of sigma.
+        sigma by 2 until we find a good value. Once we have a bad value and a good value, we proceed by binary
+        search, until we have a bad value and a good value within one precision step of each other. The larger,
+        good, value is the final selected value of sigma.
 
         :param row_nums: List/array of row numbers to use for testing overlaps (must not include any basis
             row numbers).
@@ -1135,6 +1116,7 @@ class DQM:
         For the given set of frames, return a list of row numbers for rows that have stopped (according to
         self.stopping_threshold).
 
+        :param frames: A 3-D array of frames. If None, we use self.frames (which must exist). Default None.
         :return: List of stopped row numbers.
         '''
 
@@ -1159,6 +1141,12 @@ class DQM:
 
 
     def set_stopping_threshold(self):
+        '''
+        Set self.stopping_threshold to self.mean_row_distance / 1e6. (First call self.mean_row_distance, if needed.)
+
+        :return: None.
+        '''
+
         if self.mean_row_distance is None:
             self.estimate_mean_row_distance()
         self.stopping_threshold = self.mean_row_distance / 1e6
@@ -1169,7 +1157,7 @@ class DQM:
 
     def build_frames(self, num_frames_to_build=100, frames=None, pare_frames=True, verbose=None):
         '''
-        Build new frames in a DQM evolution.
+        Build new frames in a DQM evolution and concatenate them with existing frames.
 
         Instance must have basis rows, operators, and positive sigma.
 
@@ -1180,8 +1168,8 @@ class DQM:
         self.stopping_threshold distance from one frame to the next.)
 
         :param num_frames_to_build: Number of new frames to build. Default 100.
-        :param frames: 3-D array of frames (<num rows x num dims x num frames>).  If None, we use self.frames.
-            Default None.
+        :param frames: 3-D array of existing frames (<num rows x num dims x num frames>). If None, we use
+            self.frames. Default None.
         :param pare_frames: Boolean: if True, we delete any final frames where nothing is changing. Default True.
         :param verbose: Boolean: if not None, overrides self.verbose. Default None.
         :return: If 'frames' was passed in, we return all frames (old and new together). Otherwise,
@@ -1283,7 +1271,7 @@ class DQM:
 
     def build_frames_auto(self, batch_size=100, frames=None, pare_frames=True, max_num_frames=int(1e4)):
         '''
-        Add new frames in batches until all rows have stopped.
+        Add new frames in batches (by calling build_frames) until all rows have stopped.
 
         If 'frames' is passed in, we return all frames (old and new together). Otherwise, we set
         self.frames to be all frames (old and new together) and return None.
@@ -1292,8 +1280,9 @@ class DQM:
         :param frames: 3-D array of frames (<num rows x num dims x num frames>). If None, we use self.frames.
             Default None.
         :param pare_frames: Boolean: if True, we delete any final frames where nothing is changing. Default True.
-        :param max_num_frames: Integer maximum number of frames (including any initial frames). Default 10,000.
-
+        :param max_num_frames: Maximum number of frames, including any initial frames. Default 10,000. (This
+            parameter is important because a too small value of mass can cause data points to oscillate around a
+            minimum -- overshooting the minimum at each step -- meaning that they will never stop moving.)
         :return: If 'frames' was passed in, we return all frames (old and new together). Otherwise,
             we return None.
         '''
@@ -1345,8 +1334,7 @@ class DQM:
 
     def pare_frames(self, frames):
         '''
-        Drop any frames at the end where all points have stopped moving (i.e., where frame n + 1 is
-        identical to frame n).
+        Drop any duplicate frames (where frame n + 1 is identical to frame n) at the end of an evolution.
 
         :param frames: A 3-D array of frames. No default.
         :return: A pared 3-D array of frames (which will be a reference to the frames passed in if no
@@ -1408,25 +1396,28 @@ class DQM:
     # end method clear_frames
 
 
-    def pca_projection(self, dat_raw=None):
+    def pca_projection(self, dat_raw=None, num_pca_dims=None):
         '''
         Apply PCA 'projection' (centering + rotation + truncation) to a raw data matrix, as follows:
 
         * Center the columns by subtracting self.raw_col_means (which must exist).
-        * Create a rotated and truncated matrix by applying the rotation/projection defined by the combination
-          of self.pca_eigvecs and the number of PCA dimensions being used (inferred from self.frames in the
-          2nd dim).
+        * Create a rotated and truncated matrix by applying the combination of self.pca_eigvecs (rotation) and
+          the number of PCA dimensions being used (truncation). (Number of PCA dimensions can be specified via
+          the num_pca_dims parameter. If num_pca_dims is None, we infer the number of PCA dimensions being used
+          from the 2nd dimension of self.frames, which must then exist.)
         * Calculate the proportional norms for each row in the raw data -- meaning, the centered/rotated/truncated
           L2 norm divided by the centered-only L2 norm.
 
-        The instance must have stored frames and PCA results.
+        The instance must have stored PCA results.
 
         Importantly, if dat_raw is passed in, we apply the 'in-sample' PCA projection based on the original
-        self.raw_data, *not* based on this new dat_raw. (For more detail, see the discussion of running new points
-        in the user guide.)
+        self.raw_data, *not* based on this new raw data. (For more detail, see the discussion of running new
+        points in the user guide.)
 
-        :param dat_raw: 2-D raw-data matrix.  if None, we use self.raw_data. Default None.
-        :return: A vector of proportional norms (truncated / original) for each row.
+        :param dat_raw: 2-D raw-data matrix. If None, we use self.raw_data. Default None.
+        :param num_pca_dims: Number of PCA dimensions to use in the projection. If None, we infer from the
+            number of columns in 2nd dimension of self.frames (which must then exist). default None.
+        :return: A vector of proportional norms (projected / original) for each row.
         '''
 
         if dat_raw is None:
@@ -1437,9 +1428,11 @@ class DQM:
         assert self.raw_col_means is not None, 'must have raw column means'
         assert self.raw_col_means.size == dat_raw.shape[1], "'dat_raw' must have correct number of columns"
 
-        assert self.frames and type(self.frames) is np.ndarray and self.frames.ndim == 3,\
-            "must have 'self.frames' to infer number of PCA dimensions being used"
-        num_pca_dims = self.frames.shape[1]
+        if num_pca_dims is None:
+            assert self.frames is not None and type(self.frames) is np.ndarray and self.frames.ndim == 3,\
+                "must have 'self.frames' to infer number of PCA dimensions being used"
+            num_pca_dims = self.frames.shape[1]
+        # end if num_pca_dims is None
 
         t0 = time()
 
@@ -1481,22 +1474,25 @@ class DQM:
         '''
         Given dat_raw_oos, which is a raw-data matrix of new ('out-of-sample') points:
 
-        * Apply the 'in-sample' PCA rotation/projection (subtract in-sample column means, apply in-sample
-          PCA rotation and subspace truncation/projection)
+        * Apply the 'in-sample' PCA projection (subtract in-sample column means, apply in-sample
+          PCA rotation, and truncate to in-sample number of PCA dimensions being used).
         * Build basis overlaps for the new points.
         * Evolve the new out-of-sample points, using the in-sample map (that is, the stored DQM operators),
           to as many frames as currently exist in self.frames.
 
-        :param dat_raw_oos: 2-D raw-data matrix of new 'out-of-sample' points. Must have the same number of
+        Important note: for running new out-of-sample points to make sense, the new raw data must be preprocessed
+        in exactly the same way that the original raw data was.
+
+        :param dat_raw_oos: A 2-D raw-data matrix of new 'out-of-sample' points. Must have the same number of
             columns as self.raw_data.
-        :return: tuple of:
+        :return: A tuple of:
 
             * frames_oos: 3-D array of out-of-sample evolved frames
             * overlaps_is: vector of in-sample basis overlaps (for all non-basis rows)
             * overlaps_oos: vector of out-of-sample basis overlaps
-            * norm_props_is: vector of in-sample proportional norms (rotated/truncated L2 norms divided by
+            * norm_props_is: vector of in-sample proportional norms (projected L2 norms divided by
               original L2 norms)
-            * norm_props_oos: vector of out-of-sample proportional norms (rotated/truncated L2 norms divided by
+            * norm_props_oos: vector of out-of-sample proportional norms (projected L2 norms divided by
               original L2 norms)
         '''
 
@@ -1589,11 +1585,13 @@ class DQM:
         * Build and store operators (using a full basis and default value of mass)
         * Build and store frames (using build_frames_auto) until all points stop moving
 
+        Note: default behaviors can be overridden by setting relevant instance parameters before calling this method.
+
         For small data sets, doing simple runs with various values of sigma can be the quickest way to understand
         the landscape that DQM is revealing.
 
-        :param dat_raw: Raw data (2-D matrix)
-        :param sigma: positive value for sigma
+        :param dat_raw: Raw data (2-D matrix).
+        :param sigma: Positive value for sigma.
         :return: None
         '''
 
@@ -1611,25 +1609,25 @@ class DQM:
 
 
     @classmethod
-    def exists(cls, dir, sub_dir=None):
+    def exists(cls, main_dir, sub_dir=None):
         '''
-        Check whether dir contains a saved DQM instance. If sub_dir is not None, also check
+        Check whether main_dir contains a saved DQM instance. If sub_dir is not None, also check
         whether sub_dir contains saved DQM info.
 
-        :param dir: Relative or absolute path to a folder. No default.
-        :param sub_dir: Name of subdirectory (inside the 'dir' folder) for basis-specific saved data.
+        :param main_dir: Relative or absolute path to a folder. No default.
+        :param sub_dir: Name of subdirectory (inside the 'main_dir' folder) for landscape-specific saved data.
             Default None.
-        :return: Boolean: True if dir contains a saved DQM instance. (If sub_dir is not None,
-            sub_dir must also have saved basis-specific DQM info in order for us to return True.)
+        :return: Boolean: True if main_dir contains a saved DQM instance. (If sub_dir is not None,
+            sub_dir must also have saved landscape-specific DQM info in order for us to return True.)
         '''
 
-        member_path = os.path.join(dir, 'dqm_members')
+        member_path = os.path.join(main_dir, 'dqm_members')
         if not os.path.exists(member_path):
             return False
         elif sub_dir is None:
             return True
         else:
-            sub_member_path = os.path.join(dir, sub_dir, 'dqm_members')
+            sub_member_path = os.path.join(main_dir, sub_dir, 'dqm_members')
             return os.path.exists(sub_member_path)
     # end class method exists
 
@@ -1655,7 +1653,7 @@ class DQM:
 
         Both main_dir and sub_dir (if not None) are created if they do not exist.
 
-        :param main_dir: Relative or absolute path to a folder.
+        :param main_dir: Relative or absolute path to a folder. No default.
         :param sub_dir: Name of subdirectory (inside the 'main_dir' folder) for basis-specific saved data.
             Default None.
         :return: None
@@ -1739,11 +1737,12 @@ class DQM:
         Load an instance of the DQM class from disk and return it.
 
         :param main_dir: Relative or absolute path to folder. No default.
-        :param sub_dir: Name of subdirectory (inside the 'main_dir' folder) for basis-specific saved data.
+        :param sub_dir: Name of subdirectory (inside the 'main_dir' folder) for landscape-specific saved data.
             Default None.
         :param load_raw_data: Boolean: if True, we load raw data. Set to False to save time if raw
             data is very large. Default True.
-        :return: a DQM instance with data loaded from 'main_dir' (and sub_dir, if not None).
+        :param verbose: Boolean: whether to report on various operations. Default True.
+        :return: a DQM instance with data loaded from 'main_dir' (and from sub_dir, if not None).
         '''
 
         t0 = time()
@@ -1758,7 +1757,7 @@ class DQM:
 
         dqm = DQM()
 
-        ## things that are common to all landscapes (based on different bases, parameter values, and operators)
+        ## things that are common to all landscapes (raw data and PCA info)
         if load_raw_data:
             pth = os.path.join(main_dir, 'raw_data.npy')
             if os.path.exists(pth):
@@ -1792,7 +1791,7 @@ class DQM:
             # end with pickle file
         # end if members saved
 
-        ## things that are specific to a given landscape (basis, parameter values, and operators)
+        ## things that are specific to a given landscape (basis, parameter values, operators, evolved frames)
         if sub_dir:
             pth = os.path.join(sub_dir, 'basis_rows.npy')
             if os.path.exists(pth):

@@ -6,11 +6,12 @@ import numpy as np
 
 def load_dqm_lib(lib_path):
     '''
-    load compiled-code library and set up function signatures.
+    Load compiled-code library and set up function signatures.
 
-    note: multiple modules (DQM and utils) use functions from this library
+    Note: multiple modules (DQM and utils) use functions from this library
 
-    :return: the library (a ctypes.CDLL library object)
+    :param lib_path: Relative or absolute path to compiled-library file. No default.
+    :return: The library (a ctypes.CDLL library object)
     '''
 
     # create the library object
@@ -84,15 +85,15 @@ def load_dqm_lib(lib_path):
     dqm_lib.BuildFramesAutoC.restype = None
 
     # set up signature for
-    # void ExtractManifoldsC(double* mat, int num_rows, int num_cols, double max_dist, int* dqm_idxs)
-    dqm_lib.ExtractManifoldsC.argtypes = [
+    # void GetClustersC(double* mat, int num_rows, int num_cols, double max_dist, int* dqm_idxs)
+    dqm_lib.GetClustersC.argtypes = [
         np.ctypeslib.ndpointer(dtype=np.float64, ndim=2, flags='C_CONTIGUOUS'),
         ctypes.c_int32,
         ctypes.c_int32,
         ctypes.c_double,
         np.ctypeslib.ndpointer(dtype=np.int32, ndim=1, flags='C_CONTIGUOUS'),
     ]
-    dqm_lib.ExtractManifoldsC.restype = None
+    dqm_lib.GetClustersC.restype = None
 
     # set up signature for
     # void NearestNeighborsC(double* mat, int num_rows, int num_cols, int* nn_row_nums, double* nn_dists)
@@ -109,8 +110,7 @@ def load_dqm_lib(lib_path):
 # end class method load_dqm_lib
 
 
-### find out if we have the compiled library file
-
+# find out if we have the compiled library file
 sys_name = platform.system()
 if sys_name == 'Windows':
     lib_ext = 'dll'
@@ -119,22 +119,23 @@ elif sys_name == 'Linux':
 elif sys_name == 'Darwin':  # Mac OS
     lib_ext = 'dylib'
 else:
-    raise RuntimeError(f"compiled code not implemented for platform '{sys_name}'")
+    # we assume there will be no compiled-library file found, below, with a 'none' extension
+    lib_ext = 'none'
+    print(f"## WARNING: in dqm package -- compiled-library code not implemented for platform '{sys_name}'")
 # end if/else (which system platform we're on)
 
 # we expect to find the compiled-library binary in the relative-path folder 'bin'
 lib_name = 'dqm_python.{}'.format(lib_ext)
 lib_path = os.path.join(os.path.dirname(__file__), 'bin', lib_name)
 
-
-### load the library, if we have it (will be imported by modules)
+# load the library, if we have it (will be imported from here by modules)
 dqm_lib = None
 if os.path.exists(lib_path):
     dqm_lib = load_dqm_lib(lib_path)
 # end if compile-library file exists
 
 
-### make everything in modules importable from the package
+# make everything in modules importable from the package
 # note: these must come after initializing dqm_lib, to avoid circular-import problems
 from .DQM import *
 from .utils import *
