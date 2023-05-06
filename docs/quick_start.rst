@@ -28,7 +28,7 @@ Import what we need.
 .. code-block::
 
     import numpy as np
-    from dqm import DQM, plot_frames, smooth_frames, extract_manifolds
+    from dqm import DQM, plot_frames, smooth_frames, get_clusters
 
     # import PyPlot for some basic plotting
     import matplotlib.pyplot as plt
@@ -452,31 +452,29 @@ This is not a horrible state of affairs, but DQM does provide 2 fixes for this p
 .. image:: images/quick_start_sigma3p9_smoothedframe60.png
    :align: center
 
-Using extract_manifolds
------------------------
+Using get_clusters
+------------------
 
-The :func:`extract_manifolds <dqm.utils.extract_manifolds>` function returns groups of rows that are near each other. A group can be 'near each other' in various ways, for instance in a very long chain. (This is why this function is *not* called 'extract_clusters'.) The logic in :func:`extract_manifolds <dqm.utils.extract_manifolds>` is somewhat like a simplified version of `DBSCAN <https://en.wikipedia.org/wiki/DBSCAN>`_.
+The :func:`get_clusters <dqm.utils.get_clusters>` function returns groups of rows that are near each other. A group can be 'near each other' in various ways, for instance in a very long chain. The logic in :func:`get_clusters <dqm.utils.get_clusters>` is somewhat like a simplified version of `DBSCAN <https://en.wikipedia.org/wiki/DBSCAN>`_. (*See the* :func:`get_clusters <dqm.utils.get_clusters>` *documentation for more details.*)
 
 Here (below) we extract:
 
 * the row numbers for the 4 individual clusters from frame 30
 * the row numbers for the 2 superclusters from the last frame
 
-Note: for extracting the 4 individual clusters from frame 30, the value for the ``max_dist`` parameter of :func:`extract_manifolds <dqm.utils.extract_manifolds>` (dividing the mean row distance by 8) had to be tweaked rather carefully. This is another good example of the power of visualizing the DQM evolution, which let us know that separating the 4 individual clusters around frame 30 would even be possible.
+Note: for extracting the 4 individual clusters from frame 30, the value for the ``max_dist`` parameter of :func:`get_clusters <dqm.utils.get_clusters>` (dividing the mean row distance by 8) had to be tweaked rather carefully. This is another good example of the power of visualizing the DQM evolution, which let us know that separating the 4 individual clusters around frame 30 would even be possible.
 
 .. code-block::
 
     # use frame 30 to extract the 4 individual clusters
-    cluster_manifold_row_nums, cluster_manifold_sizes = extract_manifolds(dqm.frames[:, :, 30],
-                                                                          dqm.mean_row_distance / 8)
-    print('Found these cluster manifold sizes:', cluster_manifold_sizes)
+    cluster_row_nums, cluster_sizes = get_clusters(dqm.frames[:, :, 30], dqm.mean_row_distance / 8)
+    print('Found these cluster sizes:', cluster_sizes)
 
     print()
 
     # use last frame to extract the 2 superclusters
-    supercluster_manifold_row_nums, supercluster_manifold_sizes = extract_manifolds(dqm.frames[:, :, -1],
-                                                                                    dqm.mean_row_distance / 1000)
-    print('Found these supercluster manifold sizes:', supercluster_manifold_sizes)
+    supercluster_row_nums, supercluster_sizes = get_clusters(dqm.frames[:, :, -1], dqm.mean_row_distance / 1000)
+    print('Found these supercluster sizes:', supercluster_sizes)
 
 Using run_simple
 ----------------
@@ -504,7 +502,7 @@ Be aware of the default behavior of :meth:`run_simple <dqm.DQM.run_simple>` (unl
 .. code-block::
 
     # get row numbers for the first supercluster
-    row_nums = supercluster_manifold_row_nums[0]
+    row_nums = supercluster_row_nums[0]
 
     # subselect data and color matrices
     sc1_dat = dat[row_nums, :]

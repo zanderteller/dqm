@@ -367,7 +367,7 @@ Interpreting and Using Results
 
 DQM evolutions, or 'maps', are a rich source of nuanced information about the structure inherent in any data set. Interpreting and using results from DQM maps is, accordingly, a multifaceted issue, with plenty of room for exploration and development by the user. DQM is desigend and intended for open-ended exploration, and best results will often be achieved when you approach with an open mind. Learning answers to questions you didn't know you had can be a valuable source of insights and new directions.
 
-DQM has two main tools for interpretation: application of metadata by color, and the :func:`extract_manifolds <dqm.utils.extract_manifolds>` utility function. It's easy to imagine other, more sophisticated tools as well; a few are hinted at below, and some will probably make their way into DQM over time. For now, though, it's likely that finding interesting results in your DQM analyses will involve some tool-building on your part.
+DQM has two main tools for interpretation: application of metadata by color, and the :func:`get_clusters <dqm.utils.get_clusters>` utility function. It's easy to imagine other, more sophisticated tools as well; a few are hinted at below, and some will probably make their way into DQM over time. For now, though, it's likely that finding interesting results in your DQM analyses will involve some tool-building on your part.
 
 Application of Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -398,9 +398,9 @@ Clusters
 
 Multiple clusters that have separated during DQM evolution become very easy to tell apart.
 
-DQM's primary tool for numerical separation of clusters is the :func:`extract_manifolds <dqm.utils.extract_manifolds>` utility function. You can also use any other conventional clustering algorithm, or even just separate by area of space (by setting thresholds in one or several data dimensions).
+DQM's primary tool for numerical separation of clusters is the :func:`get_clusters <dqm.utils.get_clusters>` utility function. You can also use any other conventional clustering algorithm, or even just separate by area of space (by setting thresholds in one or several data dimensions).
 
-Note that different clusters, and different numbers of clusters, can be extracted from different frames within a given DQM evolution; see the Quick Start guide's section on `Using extract_manifolds <quick_start.html#using-extract-manifolds>`_ for a clear example.
+Note that different clusters, and different numbers of clusters, can be extracted from different frames within a given DQM evolution; see the Quick Start guide's section on `Using get_clusters <quick_start.html#using-get-clusters>`_ for a clear example.
 
 1-D Extended Structures as Subclusters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -409,7 +409,7 @@ Note that different clusters, and different numbers of clusters, can be extracte
 
 When multiple 1-D structures flow into the same final location from different directions, these structures can be meaningfully treated as subclusters of the main cluster.
 
-These subclusters can be separated by numerical methods (including, as in the `Quick Start <quick_start.html#using-extract-manifolds>`_ guide, by using :func:`extract_manifolds <dqm.utils.extract_manifolds>` on an intermediate frame). In some cases, though, it may be easier to separate them by isolating the main cluster and then building a new DQM map to separate the subclusters. (The Quick Start guide's section on `using run_sumple <quick_start.html#using-run-simple>`_ demonstrates this technique as well.)
+These subclusters can be separated by numerical methods (including, as in the `Quick Start <quick_start.html#using-get-clusters>`_ guide, by using :func:`get_clusters <dqm.utils.get_clusters>` on an intermediate frame). In some cases, though, it may be easier to separate them by isolating the main cluster and then building a new DQM map to separate the subclusters. (The Quick Start guide's section on `using run_sumple <quick_start.html#using-run-simple>`_ demonstrates this technique as well.)
 
 You may even see branches in these 1-D structures, like multiple tributaries feeding into a larger river. The relative importance of these sub-subclusters will often be context-dependent (possibly depending on relationships with metadata).
 
@@ -431,7 +431,7 @@ DQM has been seen to uncover 2-dimensional manifolds in real data, and there are
 
 Interpretation and analysis of these higher-dimensional manifolds may be valuable but will be intrinsically more complex.
 
-One approach to exploring the effective dimensionality of a particular structure is to isolate that structure and then re-run PCA, typically on an intermediate frame of the evolution, just for the points in the structure in question.
+One approach to exploring the effective dimensionality of a particular structure is to isolate that structure (using, e.g., :func:`get_clusters <dqm.utils.get_clusters>`) and then re-run PCA, typically on an intermediate frame of the evolution, just for the points in the structure in question.
 
 The utility function :func:`rescale_frames <dqm.utils.rescale_frames>` can also be useful here; it effectively 'zooms in' on a structure that is shrinking as the DQM evolution unfolds, making it much easier to see the nature of the structure later in the evolution. Subselecting data points to see only the structure in question (with no outliers) is important in order for this tool to be useful.
 

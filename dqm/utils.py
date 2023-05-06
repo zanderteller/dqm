@@ -126,22 +126,22 @@ def pca(mat, verbose=True):
 # end function pca
 
 
-def extract_manifolds(mat, max_dist):
+def get_clusters(mat, max_dist):
     '''
-    Extract manifolds from a matrix.
+    Get clusters from a matrix.
 
-    We here define a manifold (in a somewhat nonstandard but very simple way) as a group of rows such that every
-    row is within max_dist Euclidean distance of at least one other row in the manifold. (The largest distance
-    between 2 rows in a manifold may be much larger than max_dist.)
+    We here define a cluster as a group of rows such that every row is within max_dist Euclidean distance
+    of at least one other row in the cluster. The largest distance between 2 rows in a cluster may be
+    much larger than max_dist. ('Cluster' is defined here in a way that will include extended structures.)
 
     :param mat: A 2-D real-valued matrix. No default.
-    :param max_dist: A row being within max_dist Euclidean distance of any other row in a manifold
-        will make that row part of that same manifold. No default.
-    :return: a tuple of:
+    :param max_dist: A row being within max_dist Euclidean distance of any other row in a cluster
+        will make that row part of that same cluster. No default.
+    :return: A tuple of:
 
-        * a list of lists of row numbers for the manifolds. the list of manifolds is sorted by manifold
+        * a list of lists of row numbers for the clusters. the list of clusters is sorted by cluster
           size (number of rows), in descending order.
-        * a parallel list of manifold sizes
+        * a parallel list of cluster sizes
     '''
 
     '''
@@ -155,7 +155,7 @@ def extract_manifolds(mat, max_dist):
 
     num_rows, num_cols = mat.shape
 
-    manifolds = []
+    clusters = []
 
     man_idxs = np.ndarray(num_rows, dtype=np.int32)
 
@@ -163,70 +163,70 @@ def extract_manifolds(mat, max_dist):
         mat = np.copy(mat)
 
     if dqm_lib is None:
-        print('## WARNING: in extract_manifolds -- compiled-library code not found, calling Python code...')
-        manifolds, manifold_sizes = _extract_manifolds_python(mat, max_dist)
-        return manifolds, manifold_sizes
+        print('## WARNING: in get_clusters -- compiled-library code not found, calling Python code...')
+        clusters, cluster_sizes = _get_clusters_python(mat, max_dist)
+        return clusters, cluster_sizes
     # end if don't have compiled-library code
 
-    dqm_lib.ExtractManifoldsC(mat, num_rows, num_cols, max_dist, man_idxs)
+    dqm_lib.GetClustersC(mat, num_rows, num_cols, max_dist, man_idxs)
 
-    # extract manifolds from man_idxs (see ExtractManifoldsC for details)
+    # get clusters from man_idxs (see GetClustersC for details)
     # notes
-    #  * row indices in man_idxs are a linked list for each manifold
-    #  * each entry in man_idxs points to the next row in that manifold
+    #  * row indices in man_idxs are a linked list for each cluster
+    #  * each entry in man_idxs points to the next row in that cluster
     #  * a value of num_rows in man_idxs means the end of a given linked list (either the given row is its
-    #    own manifold, or it's the last row in a manifold)
+    #    own cluster, or it's the last row in a cluster)
     #  * the lists should always point forward, meaning we should always have man_idxs[row_idx] > row_idx
-    #  * as we add rows to the manifolds we're constructing, we flag them with a -1 value and ignore them
+    #  * as we add rows to the clusters we're constructing, we flag them with a -1 value and ignore them
     #    from then on
     assert np.min(man_idxs) >= 0, "'man_idxs' must not have any negative values"
     for row_idx in range(num_rows):
         if man_idxs[row_idx] == -1:
-            continue  # this row has already been added to a manifold
+            continue  # this row has already been added to a cluster
 
-        manifold = [row_idx]
+        cluster = [row_idx]
         idx = row_idx
         while man_idxs[idx] < num_rows:
             assert man_idxs[idx] > idx, 'linked lists should always point forward in the overall list'
             new_idx = man_idxs[idx]
             man_idxs[idx] = -1
             idx = new_idx
-            manifold.append(idx)
-        # end while following linked list for current manifold
+            cluster.append(idx)
+        # end while following linked list for current cluster
         man_idxs[idx] = -1
 
-        manifolds.append(manifold)
+        clusters.append(cluster)
     # end for each row
 
-    # sort manifolds by size, descending
-    manifolds.sort(reverse=True, key=lambda x: len(x))
+    # sort clusters by size, descending
+    clusters.sort(reverse=True, key=lambda x: len(x))
 
-    manifold_sizes = [len(manifold) for manifold in manifolds]
+    cluster_sizes = [len(cluster) for cluster in clusters]
 
-    return manifolds, manifold_sizes
-# end function extract_manifolds
+    return clusters, cluster_sizes
+# end function get_clusters
 
 
-def _extract_manifolds_python(mat, max_dist):
+def _get_clusters_python(mat, max_dist):
     '''
-    Extract manifolds from a matrix.
+    Get clusters from a matrix.
 
-    We here define a manifold (in a somewhat nonstandard but very simple way) as a group of rows such that every
-    row is within max_dist Euclidean distance of at least one other row in the manifold. (The largest distance
-    between 2 rows in a manifold may be much larger than max_dist.)
+    We here define a cluster as a group of rows such that every row is within max_dist Euclidean distance
+    of at least one other row in the cluster. The largest distance between 2 rows in a cluster may be
+    much larger than max_dist. ('Cluster' is defined here in a way that will include extended structures.)
 
-    This is the version of extract_manifolds that does *not* call the compiled C++ code. This python-only
+    This is the version of get_clusters that does *not* call the compiled C++ code. This python-only
     version is faster in some cases, but it's unusably slow for large numbers of rows, meaning more than 100k
     or so (except maybe in certain corner cases).
 
     :param mat: A 2-D real-valued matrix. No default.
-    :param max_dist: A row being within max_dist Euclidean distance of any other row in a manifold
-        will make that row part of that same manifold. No default.
-    :return: a tuple of:
+    :param max_dist: A row being within max_dist Euclidean distance of any other row in a cluster
+        will make that row part of that same cluster. No default.
+    :return: A tuple of:
 
-        * a list of lists of row numbers for the manifolds. the list of manifolds is sorted by manifold
+        * a list of lists of row numbers for the cluster. the list of clusters is sorted by cluster
           size (number of rows), in descending order.
-        * a parallel list of manifold sizes
+        * a parallel list of cluster sizes
     '''
 
     assert type(mat) is np.ndarray and mat.ndim == 2, "'mat' must be a 2-dimensional ndarray"
@@ -234,38 +234,38 @@ def _extract_manifolds_python(mat, max_dist):
 
     num_rows = mat.shape[0]
 
-    manifolds = []
+    clusters = []
 
     row_nums_left = list(range(num_rows))
 
     while np.any(row_nums_left):
         seed_row_num = row_nums_left[0]
         row_nums_left = row_nums_left[1:]
-        new_manifold = _extract_manifold_python(mat, max_dist, seed_row_num, row_nums_left)
-        manifolds.append(new_manifold)
-        row_nums_left = list(set(row_nums_left).difference(set(new_manifold)))
+        new_cluster = _get_cluster_python(mat, max_dist, seed_row_num, row_nums_left)
+        clusters.append(new_cluster)
+        row_nums_left = list(set(row_nums_left).difference(set(new_cluster)))
     # end while any rows left
 
-    # sort manifolds by size, descending
-    manifolds.sort(reverse=True, key=lambda x: len(x))
+    # sort clusters by size, descending
+    clusters.sort(reverse=True, key=lambda x: len(x))
 
-    manifold_sizes = [len(manifold) for manifold in manifolds]
+    cluster_sizes = [len(cluster) for cluster in clusters]
 
-    return manifolds, manifold_sizes
-# end function _extract_manifolds_python
+    return clusters, cluster_sizes
+# end function _get_clusters_python
 
 
-def _extract_manifold_python(mat, max_dist, seed_row_num, row_nums=None):
+def _get_cluster_python(mat, max_dist, seed_row_num, row_nums=None):
     '''
-    Extract a single manifold from a matrix. (See comments for extract_manifolds_python for details.)
+    Get a single cluster from a matrix. (See comments for _get_clusters_python for details.)
 
     :param mat: A 2-D real-valued matrix. No default.
-    :param max_dist: A row being within max_dist Euclidean distance of any other row in a manifold
-        will make that row part of that same manifold. No default.
-    :param seed_row_num: Row number for the seed row for the manifold.
+    :param max_dist: A row being within max_dist Euclidean distance of any other row in a cluster
+        will make that row part of that same cluster. No default.
+    :param seed_row_num: Row number for the seed row for the cluster.
     :param row_nums: List of row numbers to consider (may or may not contain seed_row_num). If None, we use
         all row numbers. Default None.
-    :return: List of row numbers for the manifold, starting with seed_row_num.
+    :return: List of row numbers for the cluster, starting with seed_row_num.
     '''
 
     assert type(mat) is np.ndarray and mat.ndim == 2, "'mat' must be a 2-dimensional ndarray"
@@ -280,7 +280,7 @@ def _extract_manifold_python(mat, max_dist, seed_row_num, row_nums=None):
         row_nums = list(range(num_rows))
     cand_row_nums = np.array(list(set(row_nums).difference({seed_row_num})))
 
-    man_row_nums = np.array([seed_row_num])  # row numbers in the manifold
+    man_row_nums = np.array([seed_row_num])  # row numbers in the cluster
     seed_row_nums = np.array([seed_row_num])  # current seed row numbers
 
     num_cols = mat.shape[1]
@@ -305,7 +305,7 @@ def _extract_manifold_python(mat, max_dist, seed_row_num, row_nums=None):
         # rows that are not close remain candidates
         cand_row_nums = cand_row_nums[min_dists > max_dist]
 
-        # add close rows to manifold
+        # add close rows to cluster
         man_row_nums = np.concatenate((man_row_nums, close_row_nums))
 
         # set up new seeds
@@ -313,7 +313,7 @@ def _extract_manifold_python(mat, max_dist, seed_row_num, row_nums=None):
     # end while seeds and candidates left
 
     return man_row_nums.tolist()
-# end function _extract_manifold_python
+# end function _get_cluster_python
 
 
 def nearest_neighbors(mat):

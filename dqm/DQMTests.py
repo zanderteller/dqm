@@ -1,4 +1,4 @@
-from . import DQM, extract_manifolds
+from . import DQM, get_clusters
 import numpy as np
 from copy import copy
 import unittest
@@ -664,7 +664,7 @@ class DQMTests(unittest.TestCase):
         last_frame_all = np.concatenate((dqm.frames[:, :, -1], frames_oos[:, :, -1]), axis=0)
         is_row_nums = list(range(num_rows))
         oos_row_nums = list(range(num_rows, last_frame_all.shape[0]))
-        clusters, cluster_sizes = extract_manifolds(last_frame_all, 0.001)
+        clusters, cluster_sizes = get_clusters(last_frame_all, 0.001)
         # select clusters that have any out-of-sample points
         oos_clusters = [cluster for cluster in clusters if any([x in oos_row_nums for x in cluster])]
         # find count of in-sample rows in each out-of-sample cluster

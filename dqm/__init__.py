@@ -84,15 +84,15 @@ def load_dqm_lib(lib_path):
     dqm_lib.BuildFramesAutoC.restype = None
 
     # set up signature for
-    # void ExtractManifoldsC(double* mat, int num_rows, int num_cols, double max_dist, int* dqm_idxs)
-    dqm_lib.ExtractManifoldsC.argtypes = [
+    # void GetClustersC(double* mat, int num_rows, int num_cols, double max_dist, int* dqm_idxs)
+    dqm_lib.GetClustersC.argtypes = [
         np.ctypeslib.ndpointer(dtype=np.float64, ndim=2, flags='C_CONTIGUOUS'),
         ctypes.c_int32,
         ctypes.c_int32,
         ctypes.c_double,
         np.ctypeslib.ndpointer(dtype=np.int32, ndim=1, flags='C_CONTIGUOUS'),
     ]
-    dqm_lib.ExtractManifoldsC.restype = None
+    dqm_lib.GetClustersC.restype = None
 
     # set up signature for
     # void NearestNeighborsC(double* mat, int num_rows, int num_cols, int* nn_row_nums, double* nn_dists)

@@ -59,48 +59,48 @@ class UtilTests(unittest.TestCase):
     # end method compare_pca_results
 
 
-    def test_extract_manifolds(self):
+    def test_get_clusters(self):
         rng = np.random.default_rng(119)
         mat = rng.random((100, 15))
 
         num_rows = mat.shape[0]
 
         # test case where all rows are singletons
-        manifolds, manifold_sizes = utils.extract_manifolds(mat, 0.1)
-        self.assertTrue(len(manifold_sizes) == num_rows, 'must return all singletons for small max_dist')
+        clusters, cluster_sizes = utils.get_clusters(mat, 0.1)
+        self.assertTrue(len(cluster_sizes) == num_rows, 'must return all singletons for small max_dist')
 
-        # test case where all rows are in a single manifold
-        manifolds, manifold_sizes = utils.extract_manifolds(mat, 2)
-        self.assertTrue(len(manifold_sizes) == 1 and manifold_sizes[0] == num_rows,
-                        'must return single manifold for large max_dist')
+        # test case where all rows are in a single cluster
+        clusters, cluster_sizes = utils.get_clusters(mat, 2)
+        self.assertTrue(len(cluster_sizes) == 1 and cluster_sizes[0] == num_rows,
+                        'must return single cluster for large max_dist')
 
-        # test case where results with multiple manifolds come out as expected
-        manifolds, manifold_sizes = utils.extract_manifolds(mat, 1)
-        self.assertTrue(len(manifolds) == 50 and
-                        manifold_sizes[:3] == [17, 14, 11] and
-                        manifolds[0] == [2, 4, 5, 8, 12, 17, 40, 46, 47, 49, 57, 63, 65, 75, 84, 85, 91],
-                        'returned manifolds for max_dist of 1 must be as expected')
-    # end method test_extract_manifolds
+        # test case where results with multiple clusters come out as expected
+        clusters, cluster_sizes = utils.get_clusters(mat, 1)
+        self.assertTrue(len(clusters) == 50 and
+                        cluster_sizes[:3] == [17, 14, 11] and
+                        clusters[0] == [2, 4, 5, 8, 12, 17, 40, 46, 47, 49, 57, 63, 65, 75, 84, 85, 91],
+                        'returned clusters for max_dist of 1 must be as expected')
+    # end method test_get_clusters
 
 
-    def test_extract_manifolds_python(self):
+    def test_get_clusters_python(self):
         rng = np.random.default_rng(6709)
         mat = rng.random((100, 12))
 
-        # test that C and Python version return the same results
+        # test that C and Python versions return the same results
         max_dist = 0.8
-        manifolds, manifold_sizes = utils.extract_manifolds(mat, max_dist)
-        manifolds_python, manifold_sizes_python = utils.extract_manifolds_python(mat, max_dist)
+        clusters, cluster_sizes = utils.get_clusters(mat, max_dist)
+        clusters_python, cluster_sizes_python = utils._get_clusters_python(mat, max_dist)
 
-        # sort all manifolds
-        manifolds = [sorted(manifold) for manifold in manifolds]
-        manifolds_python = [sorted(manifold) for manifold in manifolds_python]
+        # sort all clusters
+        clusters = [sorted(cluster) for cluster in clusters]
+        clusters_python = [sorted(cluster) for cluster in clusters_python]
 
         # order of singletons is different -- we won't worry about that
-        all_found_1 = all([manifold in manifolds for manifold in manifolds_python])
-        all_found_2 = all([manifold in manifolds_python for manifold in manifolds])
+        all_found_1 = all([cluster in clusters for cluster in clusters_python])
+        all_found_2 = all([cluster in clusters_python for cluster in clusters])
         self.assertTrue(all_found_1 and all_found_2, 'C and Python versions must return same results')
-    # end method test_extract_manifolds_python
+    # end method test_get_clusters_python
 
 
     def test_nearest_neighbors(self):

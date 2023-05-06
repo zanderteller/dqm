@@ -100,7 +100,7 @@ void NearestNeighbors(double* mat, int num_rows, int num_cols, int* nn_row_nums,
 } // end function NearestNeighbors
 
 // find unclaimed rows within max_dist of seed row and mark them with the sentinel value
-int GrowManifoldFromSeed(double* mat, int num_rows, int num_cols, double max_dist, int* cluster_idxs, int start_row_idx, int seed_row_idx, int sentinel_value)
+int GrowClusterFromSeed(double* mat, int num_rows, int num_cols, double max_dist, int* cluster_idxs, int start_row_idx, int seed_row_idx, int sentinel_value)
 {
 	// sentinel values may already exist in cluster_idxs -- use a temporary sentinel value to track how many we added here
 	int temp_sentinel_value = 2 * num_rows;
@@ -129,10 +129,10 @@ int GrowManifoldFromSeed(double* mat, int num_rows, int num_cols, double max_dis
 		}
 
 	return num_added;
-} // end function GrowManifoldFromSeed
+} // end function GrowClusterFromSeed
 
 // find unclaimed rows within max_dist of any sentinel-value rows after seed row and mark them with the next lower sentinel value
-int GrowManifoldFromSentinelValue(double* mat, int num_rows, int num_cols, int num_candidates, double max_dist, int* cluster_idxs, int start_row_idx, int sentinel_value)
+int GrowClusterFromSentinelValue(double* mat, int num_rows, int num_cols, int num_candidates, double max_dist, int* cluster_idxs, int start_row_idx, int sentinel_value)
 {
 	int total_added = 0;
 	int num_added;
@@ -144,131 +144,132 @@ int GrowManifoldFromSentinelValue(double* mat, int num_rows, int num_cols, int n
 			break;
 		if (cluster_idxs[row_idx] == sentinel_value)
 		{
-			num_added = GrowManifoldFromSeed(mat, num_rows, num_cols, max_dist, cluster_idxs, start_row_idx, row_idx, sentinel_value - 1);
+			num_added = GrowClusterFromSeed(mat, num_rows, num_cols, max_dist, cluster_idxs, start_row_idx, row_idx, sentinel_value - 1);
 			total_added += num_added;
 			num_candidates -= num_added;
 		}
 	}
 
 	return total_added;
-} // end function GrowManifoldFromSentinelValue
+} // end function GrowClusterFromSentinelValue
 
 /*
-extract a single manifold from a matrix, starting from the given start row.  we here define a manifold as a group of rows
-such that every row is within max_dist Euclidean distance of at least one other row in the manifold.  (the largest distance
-between 2 rows in a manifold may be much larger than max_dist.)
+get a single cluster from a matrix, starting from the given start row.  we here define a cluster as a group of rows
+such that every row is within max_dist Euclidean distance of at least one other row in the cluster.  the largest distance
+between 2 rows in a cluster may be much larger than max_dist.  ('cluster' is defined here in a way that will include
+extended structures.)
 
-The output in cluster_idxs represents each manifold as a linked list, as follows: starting from row 0, each row's entry
-in cluster_idxs contains the row idx of the next row in this row's manifold.  the last row (and possibly first row) in any
-manifold will have num_rows as its entry in cluster_idxs.  any row with a -1 in cluster_idxs is still unclaimed.
+The output in cluster_idxs represents each cluster as a linked list, as follows: starting from row 0, each row's entry
+in cluster_idxs contains the row idx of the next row in this row's cluster.  the last row (and possibly first row) in any
+cluster will have num_rows as its entry in cluster_idxs.  any row with a -1 in cluster_idxs is still unclaimed.
 
 inputs
 * mat: double array containing the <num_rows x num_cols> matrix entries
 * num_rows: number of rows in mat
 * num_cols: number of columns inmat
 * num_candidates: number of unclaimed rows, including start row, none of which will be before start row
-* max_dist: maximum Euclidean for membership in a manifold.
+* max_dist: maximum Euclidean for membership in a cluster.
 * cluster_idxs: allocated <num_rows> int array, which we fill in.
-* start_row_idx: index for the row to use as the seed for manifold.
+* start_row_idx: index for the row to use as the seed for cluster.
 
 output
-* integer number of rows in the manifold
+* integer number of rows in the cluster
 */
-int ExtractManifold(double* mat, int num_rows, int num_cols, int num_candidates, double max_dist, int* cluster_idxs, int start_row_idx)
+int GetCluster(double* mat, int num_rows, int num_cols, int num_candidates, double max_dist, int* cluster_idxs, int start_row_idx)
 {
 	/*
 	algo notes
 
 	the plan:
-	* in cluster_idxs, -1 is the sentinel value telling us that a row is unclaimed (not yet part of a manifold)
+	* in cluster_idxs, -1 is the sentinel value telling us that a row is unclaimed (not yet part of a cluster)
 	* mark start row with a sentinel value of -2
-	* call GrowManifoldFromSeed to mark all unclaimed rows within max_dist of the start row with a -3 sentinel value
-	* call GrowManifoldFromSentinelValue with a sentinel value of -2 -- this will mark all unclaimed rows within max_dist
-	  of the -2 rows with a -3.  then call GrowManifoldFromSentinelValue again with a value of -3, etc.  Continue as long as
+	* call GrowClusterFromSeed to mark all unclaimed rows within max_dist of the start row with a -3 sentinel value
+	* call GrowClusterFromSentinelValue with a sentinel value of -2 -- this will mark all unclaimed rows within max_dist
+	  of the -2 rows with a -3.  then call GrowClusterFromSentinelValue again with a value of -3, etc.  Continue as long as
 	  new rows were added with the latest sentinel value.
-	* walk forward from start row, building linked list for the manifold using all cluster index values < -1.
-	* mark the last row in the manifold with num_rows as its entry in cluster_idxs
+	* walk forward from start row, building linked list for the cluster using all cluster index values < -1.
+	* mark the last row in the cluster with num_rows as its entry in cluster_idxs
 
 	*/
 
 	// mark start row with sentinel value of -2
 	int sentinel_value = -2;
 	cluster_idxs[start_row_idx] = sentinel_value;
-	int num_in_manifold = 1;
+	int num_in_cluster = 1;
 	num_candidates--;
 
 	int num_added;
 	bool done = false;
 	while (!done)
 	{
-		// GrowManifoldFromSentinelValue labels newly claimed rows with (sentinel-value - 1)
-		num_added = GrowManifoldFromSentinelValue(mat, num_rows, num_cols, num_candidates, max_dist, cluster_idxs, start_row_idx, sentinel_value);
+		// GrowClusterFromSentinelValue labels newly claimed rows with (sentinel-value - 1)
+		num_added = GrowClusterFromSentinelValue(mat, num_rows, num_cols, num_candidates, max_dist, cluster_idxs, start_row_idx, sentinel_value);
 		done = num_added == 0;
-		num_in_manifold += num_added;
+		num_in_cluster += num_added;
 		num_candidates -= num_added;
 		sentinel_value--;
 	} // end while not done
 
 	int last_row_idx = start_row_idx;
-	int num_left = num_in_manifold;
+	int num_left = num_in_cluster;
 	if (num_left > 1)
 	{
-		// walk forward and build the linked list for this manifold -- any row with a sentinel value < -1 is part of the manifold
+		// walk forward and build the linked list for this cluster -- any row with a sentinel value < -1 is part of the cluster
 		// (note: we can ignore rows before start row, since they will all have been claimed already)
 		for (int row_idx = start_row_idx + 1; row_idx < num_rows; row_idx++)
 		{
 			if (cluster_idxs[row_idx] < -1)
 			{
-				// this row was claimed for this manifold
+				// this row was claimed for this cluster
 				cluster_idxs[last_row_idx] = row_idx; // last row points to this row
 				last_row_idx = row_idx; // this row is now last row
 				num_left--;
 				if (num_left == 1)
 					break; // last row is dealt with outside the loop
-			} // end if adding row to the manifold
+			} // end if adding row to the cluster
 		} // end for each row after start row
 	} // end if any rows added after the start row
 	cluster_idxs[last_row_idx] = num_rows; // mark the end of the linked list with the out-of-range value num_rows
 
-	return num_in_manifold;
-} // end function ExtractManifold
+	return num_in_cluster;
+} // end function GetCluster
 
 /*
-extract all manifolds from a matrix.  we here define a manifold as a group of rows such that every row is within max_dist
-Euclidean distance of at least one other row in the manifold.  (the largest distance between 2 rows in a manifold may be
-much larger than max_dist.)
+get all clusters from a matrix.  we here define a cluster as a group of rows such that every row is within max_dist
+Euclidean distance of at least one other row in the cluster.  the largest distance between 2 rows in a cluster may be
+much larger than max_dist.  ('cluster' is defined here in a way that will include extended structures.)
 
-The output in cluster_idxs represents each manifold as a linked list, as follows: starting from row 0, each row's entry
-in cluster_idxs contains the row idx of the next row in this row's manifold.  the last row (and possibly first row) in any
-manifold will have num_rows as its entry in cluster_idxs.  any row with a -1 in cluster_idxs is still unclaimed.
+The output in cluster_idxs represents each cluster as a linked list, as follows: starting from row 0, each row's entry
+in cluster_idxs contains the row idx of the next row in this row's cluster.  the last row (and possibly first row) in any
+cluster will have num_rows as its entry in cluster_idxs.  any row with a -1 in cluster_idxs is still unclaimed.
 
 inputs
 * mat: double array containing the <num_rows x num_cols> matrix entries
 * num_rows: number of rows in mat
 * num_cols: number of columns inmat
-* max_dist: maximum Euclidean for membership in a manifold.
+* max_dist: maximum Euclidean for membership in a cluster.
 * cluster_idxs: allocated <num_rows> int array, which we fill in.
 
 output
 * none
 */
-void ExtractManifolds(double* mat, int num_rows, int num_cols, double max_dist, int* cluster_idxs)
+void GetClusters(double* mat, int num_rows, int num_cols, double max_dist, int* cluster_idxs)
 {
 	// initialize all cluster indices to -1
 	for (int i = 0; i < num_rows; i++)
 		cluster_idxs[i] = -1;
 
 	int num_candidates = num_rows;
-	int num_in_manifold;
+	int num_in_cluster;
 
 	for (int start_row_idx = 0; start_row_idx < num_rows; start_row_idx++)
 	{
 		if (cluster_idxs[start_row_idx] == -1)
 		{
-			// this row is unclaimed -- build a manifold with this row as the seed row
-			// note: ExtractManifold will never look before start_row_idx -- any earlier row will already be in a manifold
-			num_in_manifold = ExtractManifold(mat, num_rows, num_cols, num_candidates, max_dist, cluster_idxs, start_row_idx);
-			num_candidates -= num_in_manifold;
+			// this row is unclaimed -- build a cluster with this row as the seed row
+			// note: GetCluster will never look before start_row_idx -- any earlier row will already be in a cluster
+			num_in_cluster = GetCluster(mat, num_rows, num_cols, num_candidates, max_dist, cluster_idxs, start_row_idx);
+			num_candidates -= num_in_cluster;
 		}
 	}
-} // end function ExtractManifolds
+} // end function GetClusters
