@@ -1,11 +1,5 @@
 # Configuration file for the Sphinx documentation builder.
 
-
-# uncomment these lines for local builds (in place of pip install of our package)
-#import sys
-#sys.path.insert(0, '.')
-
-
 # -- Project information
 
 project = 'DQM'
@@ -42,3 +36,15 @@ html_theme = 'sphinx_rtd_theme'
 
 # -- Options for EPUB output
 epub_show_urls = 'footnote'
+
+# -- Local build configuration
+
+# are we building on ReadTheDocs or locally?
+import os
+on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+if not on_rtd:
+    # RTD installs our package via pip (see our requirements.txt file)
+    # here, locally, we just add it to the path
+    import sys
+    sys.path.insert(0, '.')
+# end if building locally

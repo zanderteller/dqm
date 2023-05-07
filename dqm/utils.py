@@ -424,6 +424,10 @@ def plot_frames(frames, color='blue', size=5, skip_frames=1, fps=10, title='', l
     :return: None
     '''
 
+    '''
+    2FIX: add wiring to enable use of Plotly's built-in color maps?
+    '''
+
     assert HAVE_PTY, "must have loaded plotly.graph_objects module to use plot_frames"
 
     assert type(frames) is np.ndarray and frames.ndim in [2, 3] and frames.shape[1] >= 3, \

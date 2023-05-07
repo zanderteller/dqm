@@ -204,6 +204,12 @@ class DQM:
         :return: Suggested default mass value for the given number of dimensions.
         '''
 
+        '''
+        2FIX: consider ways to address the issue mentioned above, where we would suggest a default mass
+        based on effective dimensionality of the data cloud, not just on the total number of dimensions
+        being used.
+        '''
+
         assert num_dims is not None or self.frames is not None,\
             'must have a number of dimensions (passed in or from self.frames) to determine a suggested default mass'
         if num_dims is None:
@@ -1420,6 +1426,17 @@ class DQM:
         :return: A vector of proportional norms (projected / original) for each row.
         '''
 
+        '''
+        2FIX: add checks/warnings for this (probably very unlikely?) corner case
+
+        if, after centering the data cloud, a data point is exactly at (or within machine precision of) the
+        origin, then calculations here wil fail: either the original L2 norm will actually be zero (producing
+        a divide-by-zero error), or the proportion of norms for this point will be dominated by noise.
+        
+        it's a little easier to imagine this case coming up in a scenario involving discrete data (e.g., many
+        binary dimensions)...
+        '''
+
         if dat_raw is None:
             dat_raw = self.raw_data
         assert type(dat_raw) is np.ndarray and dat_raw.ndim == 2, "'dat_raw' must be a 2-D ndarray"
@@ -1496,6 +1513,18 @@ class DQM:
               original L2 norms)
         '''
 
+        '''
+        2FIX: create parameter to specify number of frames to build for new points?
+        * as many as in self.frames (current default)
+        * as many frames as needed for new points to stop
+        * explicitly specified number of frames
+
+        2FIX: add option where new points below specified thresholds for PCA-transformation proportional norms
+        ('off the map') or basis overlaps ('in a blank spot on the map') are not evolved at all? (the fact that
+        a low-overlap point ‘snaps’ closer to the basis points at the beginning of evolution is confusing and
+        misleading. [ADDRESS THIS ISSUE MORE GENERALLY SOMEHOW?])
+        '''
+
         assert type(dat_raw_oos) is np.ndarray and dat_raw_oos.ndim == 2, \
             "'dat_raw_oos' must be a 2-D ndarray"
         assert dat_raw_oos.shape[1] == self.raw_data.shape[1], \
@@ -1568,7 +1597,6 @@ class DQM:
         # end if verbose
 
         # run dqm evolution of out-of-sample points, using in-sample operators and parameter values
-        # 2FIX: CREATE PARAMETER TO SPECIFY NUMBER OF FRAMES TO BUILD?
         num_frames_to_build = self.frames.shape[2] - 1
         frames_oos = self.build_frames(num_frames_to_build, frames=frame0_oos)
 

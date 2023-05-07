@@ -18,6 +18,12 @@ class DQMTests(unittest.TestCase):
         self.assertTrue(sorted(inst_vars) == sorted(checklist), 'DQM instance variables must match the checklist')
     # end method test_instance_variables
 
+    '''
+    2FIX: there are several places where we could/should test the quality/coherence of results at a deeper level
+    * test_choose_basis_by_distance: test the quality/coherence of basis rows (are they far apart?)
+    * test_build_frames – test the quality/coherence of built frames (e.g., test for oscillation?)
+    * test_run_new_points – test the quality/coherence of built frames for new points
+    '''
 
     def test_default_mass_for_num_dims(self):
         dqm = DQM()

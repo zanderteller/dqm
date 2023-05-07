@@ -16,11 +16,24 @@ No assumptions are made about the underlying structure of the data.
 
 Visual and numerical analysis of the resulting animated 'evolution' of the data can reveal both clusters and extended structures, leading to a rich understanding of relationships between and within different subsets of the data.
 
-Among other uses, DQM can help with understanding how many models are needed for a given data set. (See the section :ref:`How Many Models for Your Data?`)
+Among other uses, DQM can help with understanding how many models are needed for a given data set. (See the section :ref:`How Many Models for Your Data?` below.)
 
 .. note::
 
    In code examples throughout this guide, we'll refer to an instance of the :class:`DQM <dqm.DQM>` class that we'll call 'dqm', created with the default constructor: ``dqm = DQM()``.
+
+Why Quantum Mechanics?
+----------------------
+
+**First of all: as a user of DQM, you don't need to know anything about quantum mechanics.**
+
+Now, if you're curious about why DQM uses quantum mechanics under the hood...
+
+The very short answer: non-local gradient descent provides an elegant solution to the problem of non-convex gradient descent.
+
+The slightly longer answer: in classical mechanics, any object moving downhill in a landscape (a ball, a pebble, a drop of water) only 'sees' the landscape locally, so it can get stuck in any local minimum (any pocket, divot, dimple) in the terrain. In quantum mechanics, however, a quantum particle 'sees' the entire landscape -- you can think of this as the particle being 'attracted' to a lower part of the landscape, even if there's a hill in between. In fact, quantum 'tunneling' is the process of the particle traveling 'through' the hill to get to the lower place. DQM uses these features of quantum mechanics to ignore the uninteresting little details of the terrain as points move downhill, thus revealing the overall structure of the landscape.
+
+*A full explanation of the underlying mathematics is available in the technical summary* `Understanding DQM <https://github.com/zanderteller/dqm/blob/main/docs/Understanding%20DQM.pdf>`_.)
 
 Visualization
 -------------
@@ -247,7 +260,7 @@ The value of mass can be adjusted manually, but it's best to leave this as an 'a
 
 .. warning::
 
-   Using a value of mass that is too small can cause oscillatory behvaior -- data points can oscillate around a minimum, because they are overshooting the minimum in each step of the evolution. In this scenario, data points may never stop moving. (The :meth:`build_frames_auto <dqm.DQM.build_frames_auto>` method has a ``max_num_frames`` parameter as a backstop for this problem.)
+   Using a value of mass that is too small can cause oscillatory behavior -- data points can oscillate around a minimum, because they are overshooting the minimum in each step of the evolution. In this scenario, data points may never stop moving. (The :meth:`build_frames_auto <dqm.DQM.build_frames_auto>` method has a ``max_num_frames`` parameter as a backstop for this problem.)
 
 **Step**
 
