@@ -17,6 +17,7 @@ Contents
 
    installation
    quick_start
+   value_of_animation
    user_guide
    api
    faq
