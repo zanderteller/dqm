@@ -23,3 +23,10 @@ Contents
    links
 
 |
+
+.. centered:: Using the first 20 PCA dimensions (raw dimensions are from PCR melt curves), DQM reveals a 1-dimensional (*not* linear/straight) structure. The 1-D structure shows a strong correlation with sample concentration.
+
+.. image:: images/real_data_2.gif
+   :align: center
+
+|
