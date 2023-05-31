@@ -1,11 +1,17 @@
 [build-system]
 requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "dqm"
 authors = [{name = "Zander Teller", email = "zander.teller@gmail.com"}]
 description = "Dynamic Quantum Mapping"
 version = "0.1.0"
+dependencies = ["numpy"]
+license = {file = "LICENSE.txt"}
 
 [tool.setuptools]
 packages = ["dqm"]
+
+[tool.setuptools.package-data]
+dqm = ["bin/dqm_python.*"]

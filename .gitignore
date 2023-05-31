@@ -1,6 +1,7 @@
 .vs/
 vs_tmp/
-docs/build/
+build/
+dqm.egg-info/
 *.pyc
 *.o
 *.dll
