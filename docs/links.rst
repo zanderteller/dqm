@@ -31,4 +31,10 @@ Videos
 * `Finding Amazing Structures Hidden in Big, Complex, Dense, Raw Data <https://www.youtube.com/watch?v=yaCDHrW8aO8>`_ (Marvin Weinstein, SETI Talks)
 * `Exploring Complex, High-Dimensional Data For Hidden Structure <https://www.youtube.com/watch?v=6TVe4x7SE20>`_ (Marvin Weinstein, SETI Talks)
 
+More Information
+----------------
+
+* `DQM GitHub Project Page <https://github.com/zanderteller/dqm>`_
+* For more information, contact Zander Teller directly at `zander@zanderteller.net <mailto:zander@zanderteller.net>`_.
+
 |

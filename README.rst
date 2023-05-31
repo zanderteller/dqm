@@ -44,4 +44,9 @@ License
 
 `MIT License <./LICENSE.txt>`_
 
+More Information
+----------------
+
+For more information, contact Zander Teller directly at zander@zanderteller.net.
+
 |

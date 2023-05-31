@@ -22,24 +22,28 @@ Soft Dependencies
 
 *The core functionality of DQM does not need any of these packages, but working with DQM will be much easier with them.*
 
-* jupyterlab (for working with DQM's example IPython notebooks)
+* jupyterlab (for working with DQM's example Jupyter notebooks)
 * plotly (for interactive animated 3-D plotting)
 * matplotlib (for basic plotting)
 
 Cloning the DQM Repository
 --------------------------
 
-Cloning
-^^^^^^^
-
 Go to the `DQM GitHub <https://github.com/zanderteller/dqm>`_ page and clone the repository to your machine. (Use the green 'Code' button at top right of the page.)
 
 For right now, you probably want the 'main' branch, which is the default on the GitHub page. (There is a tagged version 0.1.0, but things may change quickly at first...)
 
 Setting Your PYTHONPATH
-^^^^^^^^^^^^^^^^^^^^^^^
+-----------------------
 
-Wherever you put your local clone on your machine, the clone's top-level main folder (containing the README file) will ultimately need to be in your PYTHONPATH.
+Wherever you put your local clone on your machine, the clone's top-level main folder (containing the README file), which we'll call ``<your clone main folder>``, will ultimately need to be in your PYTHONPATH.
+
+If you use pip generally to install packages, you can copy the DQM package to your 'standard' site-package location as shown below. (**NOTE:** be sure to do this *AFTER* building the compiled C++ library file.)
+
+.. code-block:: console
+
+   $ cd <your clone main folder>
+   $ pip install .
 
 Compiling the C++ Library Code
 ------------------------------
@@ -65,9 +69,11 @@ To be sure everything worked, check for the compiled library in its final locati
 Windows
 ^^^^^^^
 
-Use `Visual Studio <https://visualstudio.microsoft.com/>`_.
+Use `Visual Studio <https://visualstudio.microsoft.com/>`_. In the Visual Studio application:
 
-Open the Visual Studio solution in the DQM repository (``<your clone main folder>/cpp/dqm_python.sln``) and build the solution. (Make sure the build configuration is set to 'Release' and not 'Debug'.)
+* Open the DQM Visual Studio solution file: ``<your clone main folder>/cpp/dqm_python.sln``.
+* Make sure the Configuration dropdown (in the main toolbar near the top of the window) is set to 'Release' (and *not* 'Debug').
+* From the 'Build' menu, run the 'Build Solution' command.
 
 To be sure everything worked, check for the compiled library in its final location: ``<your clone main folder>/dqm/bin/dqm_python.dll``.
 
