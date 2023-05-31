@@ -9,8 +9,11 @@ This quick-start guide will introduce DQM using a very simple example data set. 
 
 (*Note: there's also another demo Jupyter notebook, using DQM on real data, in* ``notebooks/demo_real_data_1.ipynb`` *in the DQM repository.*)
 
+Python Setup
+------------
+
 Update Your PYTHONPATH
-----------------------
+^^^^^^^^^^^^^^^^^^^^^^
 
 (*See the* :doc:`full installation instructions <installation>` *if you need them.*)
 
@@ -25,7 +28,7 @@ First, make sure the 'dqm' package is in your PYTHONPATH. If it isn't already, y
     #sys.path.append(os.path.join(os.path.expanduser('~'), 'dqm_repository'))
 
 Imports
--------
+^^^^^^^
 
 Import what we need.
 
@@ -39,6 +42,9 @@ Import what we need.
 
 Create Example Data Set
 -----------------------
+
+Create the Data Set
+^^^^^^^^^^^^^^^^^^^
 
 The example data set will have 400 data points in 20 dimensions.
 
@@ -103,7 +109,7 @@ There will be 4 spherical clusters of 100 points each, grouped as pairs in 2 'su
     print(f'Raw data has {num_rows} rows (points) and {num_cols} columns (dimensions)')
 
 Create Cluster Color Scheme
----------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Create a color scheme for the clusters and plot the first 3 raw dimensions.
 
@@ -128,6 +134,8 @@ The plot is interactive (not here -- in the Jupyter notebook, or wherever you're
 .. image:: images/quick_start_first_3_raw_dims.png
    :align: center
 
+|
+
 Create DQM Instance
 -------------------
 
@@ -141,8 +149,11 @@ Create a DQM instance and store the raw data.
 
     print('Raw data stored in DQM instance has shape:', dqm.raw_data.shape)
 
+Using PCA
+---------
+
 Run PCA
--------
+^^^^^^^
 
 Run PCA (results are stored in the instance).
 
@@ -168,8 +179,10 @@ Understanding the plots (left to right):
 .. image:: images/quick_start_run_pca_plots.png
    :align: center
 
+|
+
 Choose Number of PCA Dimensions
--------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Choose how many PCA dimensions to use.
 
@@ -189,7 +202,7 @@ Here (below), we use ``pca_var_threshold``. The instance reports that the thresh
     dqm.pca_var_threshold = 0.98
 
 Create Frame 0
---------------
+^^^^^^^^^^^^^^
 
 The :meth:`create_frame_0 <dqm.DQM.create_frame_0>` method below actually creates the first frame and stores it in the instance.
 
@@ -208,7 +221,7 @@ Creating frame 0 means:
     print("In the DQM instance, 'frames' (which now stores frame 0) has shape:", dqm.frames.shape)
 
 Plot Frame 0
-------------
+^^^^^^^^^^^^
 
 In this plot the first 3 dimensions are now PCA dimensions, not raw dimensions, which is why the separation of the clusters has become clearer.
 
@@ -219,8 +232,13 @@ In this plot the first 3 dimensions are now PCA dimensions, not raw dimensions, 
 .. image:: images/quick_start_first_3_pca_dims.png
    :align: center
 
+|
+
+Working with a Basis
+--------------------
+
 Choose a Basis
---------------
+^^^^^^^^^^^^^^
 
 The 'basis' is a subset of data points that we choose. These basis points will be used to represent all other data points and will form the core of all DQM calculations. (*The word 'basis' here is referencing the idea from linear algebra; see the technical summary* `Understanding DQM <https://github.com/zanderteller/dqm/blob/main/docs/Understanding%20DQM.pdf>`_ *for the technical details.*)
 
@@ -247,7 +265,7 @@ The :meth:`choose_basis_by_distance <dqm.DQM.choose_basis_by_distance>` method b
     dqm.choose_basis_by_distance()
 
 Plot Frame 0 Again
-------------------
+^^^^^^^^^^^^^^^^^^
 
 Plot frame 0 again, this time highlighting the basis rows in orange.
 
@@ -264,8 +282,13 @@ Plot frame 0 again, this time highlighting the basis rows in orange.
 .. image:: images/quick_start_first_3_pca_dims_basis_rows.png
    :align: center
 
+|
+
+Sigma and Overlaps
+------------------
+
 Choose Minimum Good Sigma
--------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Choose a minimum 'good' value of sigma, based on 'overlap' for non-basis points.
 
@@ -309,7 +332,7 @@ The :meth:`choose_sigma_for_basis <dqm.DQM.choose_sigma_for_basis>` method below
     print('The DQM instance now has a stored value of sigma:', dqm.sigma)
 
 Look at Overlap Distribution
-----------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Look at distribution of basis overlaps for non-basis rows, using the :meth:`build_overlaps <dqm.DQM.build_overlaps>` method. (By default, the method builds basis overlaps for all non-basis rows.)
 
@@ -330,6 +353,8 @@ Look at distribution of basis overlaps for non-basis rows, using the :meth:`buil
 
 .. image:: images/quick_start_overlap_histogram.png
    :align: center
+
+|
 
 Build Operators
 ---------------
@@ -353,8 +378,11 @@ See the :ref:`User Guide <Building Operators>` and the technical summary `Unders
     print("The position-expectation operator tensor has shape:", dqm.xops.shape)
     print("The evolution operator has shape:", dqm.exph.shape)
 
+Build Frames
+------------
+
 Build 50 Frames
----------------
+^^^^^^^^^^^^^^^
 
 We're ready to proceed with the DQM evolution.
 
@@ -374,11 +402,13 @@ Our next step (below) will be to increase sigma a bit, to get 'clean' formation 
 
     plot_frames(dqm.frames, color=cluster_colors, title='Example Data Set: Sigma=2.5')
 
-.. image:: images/quick_start_sigma2p5_frame50.png
+.. image:: images/quick_start_sigma2p5.gif
    :align: center
 
+|
+
 Show Formation of 4 Clusters
-----------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Show clean formation of 4 clusters in the DQM evolution.
 
@@ -405,11 +435,13 @@ Here's what we need to do:
 
     plot_frames(dqm.frames, color=cluster_colors, title='Example Data Set: Sigma=2.9')
 
-.. image:: images/quick_start_sigma2p9_frame60.png
+.. image:: images/quick_start_sigma2p9.gif
    :align: center
 
+|
+
 Show Formation of 2 Superclusters
----------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Show clean formation of 2 superclusters.
 
@@ -439,11 +471,13 @@ These observations are just a first taste of how the DQM evolution (not just the
     # with a large number of frames, this can keep the plotting routine from getting too slow.
     plot_frames(dqm.frames, color=cluster_colors, skip_frames=3, title='Example Data Set: Sigma=3.9')
 
-.. image:: images/quick_start_sigma3p9_frame30.png
+.. image:: images/quick_start_sigma3p9.gif
    :align: center
 
+|
+
 Smoothing Frames
-----------------
+^^^^^^^^^^^^^^^^
 
 In the plot above, the evolution is really over by frame 400. (Things are still moving, very slowly, for the last 400 frames).
 
@@ -456,11 +490,16 @@ This is not a horrible state of affairs, but DQM does provide 2 fixes for this p
 
     plot_frames(smooth_frames(dqm.frames), color=cluster_colors, title='Example Data Set: Sigma=3.9, Smoothed Frames')
 
-.. image:: images/quick_start_sigma3p9_smoothedframe60.png
+.. image:: images/quick_start_sigma3p9_smoothed.gif
    :align: center
 
+|
+
+Other Tools
+-----------
+
 Using get_clusters
-------------------
+^^^^^^^^^^^^^^^^^^
 
 The :func:`get_clusters <dqm.utils.get_clusters>` function returns groups of rows that are near each other. A group can be 'near each other' in various ways, for instance in a very long chain. The logic in :func:`get_clusters <dqm.utils.get_clusters>` is somewhat like a simplified version of `DBSCAN <https://en.wikipedia.org/wiki/DBSCAN>`_. (*See the* :func:`get_clusters <dqm.utils.get_clusters>` *documentation for more details.*)
 
@@ -484,7 +523,7 @@ Note: for extracting the 4 individual clusters from frame 30, the value for the 
     print('Found these supercluster sizes:', supercluster_sizes)
 
 Using run_simple
-----------------
+^^^^^^^^^^^^^^^^
 
 The :meth:`run_simple <dqm.DQM.run_simple>` method is indeed very simple -- in fact, here's the code in its entirety:
 
@@ -525,8 +564,10 @@ Be aware of the default behavior of :meth:`run_simple <dqm.DQM.run_simple>` (unl
 
     plot_frames(sc1_dqm.frames, color=sc1_cluster_colors, title='Example Data Set: Supercluster 1, Sigma=2.0')
 
-.. image:: images/quick_start_sc1_sigma2p0_frame20.png
+.. image:: images/quick_start_sc1_sigma2p0.gif
    :align: center
+
+|
 
 Further Reading
 ---------------
