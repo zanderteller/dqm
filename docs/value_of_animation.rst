@@ -12,7 +12,7 @@ The example below is designed to illustrate this idea as simply as possible.
 
 *Note: in other contexts, many animated data visualizations will use one of the data dimensions as 'time' in the animation. For DQM, this is* **not** *the case. The 'time' in DQM evolution reflects the process of data points moving downhill in a landscape, and is not connected to any individual data dimension.*
 
-Example: Using Animation to see 3D in 2D
+Example: Using Animation to See 3D in 2D
 ----------------------------------------
 
 Colors Don't Look Separable in 2D
