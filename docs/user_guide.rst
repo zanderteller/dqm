@@ -43,13 +43,9 @@ Animation
 
 Animated 3-D scatter plots (using DQM's :func:`plot_frames <dqm.utils.plot_frames>` utility function) are a regular feature of working with DQM.
 
-If DQM is working with, say, 20 dimensions, then the motion created by the DQM evolution is occurring in all 20 dimensions.
+If DQM is working with, say, 20 dimensions, then the motion created by the DQM evolution is occurring in all 20 dimensions. **This means, crucially, that the motion observed in an animated 3-D plot is being driven by information from 20 dimensions, even though the visualization is only showing 3 dimensions.** In this sense, DQM is *not* a 3-dimensional embedding, even though the regular use of 3-D plots may seem to suggest otherwise.
 
-**This means, crucially, that the motion observed in an animated 3-D plot is being driven by information from 20 dimensions, even though the visualization is only showing 3 dimensions.**
-
-In this sense, DQM is *not* a 3-dimensional embedding, even though the regular use of 3-D plots may seem to suggest otherwise.
-
-(This issue is revisited in the :ref:`PCA Transformation` section below.)
+See the :doc:`Value of Animation <value_of_animation>` page for a simple example illustrating this important idea.
 
 Visualization Tools
 ^^^^^^^^^^^^^^^^^^^
@@ -58,7 +54,7 @@ DQM's main visualization tool is the :func:`plot_frames <dqm.utils.plot_frames>`
 
 DQM also has a 'backup' function, :func:`plot_frames_ipv <dqm.utils.plot_frames_ipv>`, which uses the `IPyVolume <https://ipyvolume.readthedocs.io>`_ package. (IPyVolume is less stable/mature than Plotly and may be buggy. However, it may handle large numbers of data points and/or frames much better than Plotly does.)
 
-If you prefer to use your own visualization tools, you can. The core functionality of DQM itself does not rely on the plotting functions above. The final result of a DQM evolution (stored in the ``dqm.frames`` instance variable) is a 3-D array with shape: ``<number of points x number of dimensions x number of frames>``. From there, you can visualize however you wish.
+If you prefer to use your own visualization tools, you can. The core functionality of DQM itself does not rely on the plotting functions above. The final result of a DQM evolution (stored in the ``dqm.frames`` instance variable) is a 3-D array with shape: ``<number of points x number of dimensions x number of frames>``. From there, you can visualize (and analyze) however you wish.
 
 Basic Workflow
 --------------
