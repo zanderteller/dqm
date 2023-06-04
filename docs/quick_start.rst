@@ -164,7 +164,7 @@ PCA can be thought of as a simple rotation of the coordinate system for the data
 DQM does not require a PCA transformation, but using PCA is almost always helpful, for 2 reasons:
 
 #. PCA is useful for 'gentle' dimensionality reduction. Here, in the 2 leftmost plots below, the 'elbows' in the plots suggest that using the first 4 PCA dimensions will capture the most important structure in the data. (We'll use more than 4 dimensions below, to emphasize that DQM typically works in high dimension.)
-#. Visualization of the first 3 dimensions of the PCA coordinate system allows us to pack as much information as possible into a single 3-D plot.
+#. Visualization of the first 3 dimensions of the PCA coordinate system allows us to pack as much information as possible into a single 3D plot.
 
 Understanding the plots (left to right):
 

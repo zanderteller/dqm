@@ -41,9 +41,9 @@ Visualization
 Animation
 ^^^^^^^^^
 
-Animated 3-D scatter plots (using DQM's :func:`plot_frames <dqm.utils.plot_frames>` utility function) are a regular feature of working with DQM.
+Animated 3D scatter plots (using DQM's :func:`plot_frames <dqm.utils.plot_frames>` utility function) are a regular feature of working with DQM.
 
-If DQM is working with, say, 20 dimensions, then the motion created by the DQM evolution is occurring in all 20 dimensions. **This means, crucially, that the motion observed in an animated 3-D plot is being driven by information from 20 dimensions, even though the visualization is only showing 3 dimensions.** In this sense, DQM is *not* a 3-dimensional embedding, even though the regular use of 3-D plots may seem to suggest otherwise.
+If DQM is working with, say, 20 dimensions, then the motion created by the DQM evolution is occurring in all 20 dimensions. **This means, crucially, that the motion observed in an animated 3D plot is being driven by information from 20 dimensions, even though the visualization is only showing 3 dimensions.** In this sense, DQM is *not* a 3-dimensional embedding, even though the regular use of 3D plots may seem to suggest otherwise.
 
 See the :doc:`Value of Animation <value_of_animation>` page for a simple example illustrating this important idea.
 
@@ -54,12 +54,12 @@ DQM's main visualization tool is the :func:`plot_frames <dqm.utils.plot_frames>`
 
 DQM also has a 'backup' function, :func:`plot_frames_ipv <dqm.utils.plot_frames_ipv>`, which uses the `IPyVolume <https://ipyvolume.readthedocs.io>`_ package. (IPyVolume is less stable/mature than Plotly and may be buggy. However, it may handle large numbers of data points and/or frames much better than Plotly does.)
 
-If you prefer to use your own visualization tools, you can. The core functionality of DQM itself does not rely on the plotting functions above. The final result of a DQM evolution (stored in the ``dqm.frames`` instance variable) is a 3-D array with shape: ``<number of points x number of dimensions x number of frames>``. From there, you can visualize (and analyze) however you wish.
+If you prefer to use your own visualization tools, you can. The core functionality of DQM itself does not rely on the plotting functions above. The final result of a DQM evolution (stored in the ``dqm.frames`` instance variable) is a 3D array with shape: ``<number of points x number of dimensions x number of frames>``. From there, you can visualize (and analyze) however you wish.
 
 Basic Workflow
 --------------
 
-The starting point for DQM is always a 2-D real-valued matrix, with data points (samples) in the rows and dimensions (features) in the columns.
+The starting point for DQM is always a 2D real-valued matrix, with data points (samples) in the rows and dimensions (features) in the columns.
 
 Raw data is stored in a DQM instance in ``dqm.raw_data``.
 
@@ -95,7 +95,7 @@ Using a PCA transformation as part of your DQM workflow is almost always a good 
 
 First, PCA is useful for 'gentle' dimensionality reduction. A typical PCA analysis will only look at the first 2 (maybe 3) PCA dimensions; with DQM, however, dozens of PCA dimensions are often used, or even hundreds. **Using hundreds of PCA dimensions may still count as important dimensionality reduction if you're working with very high-dimensional data.**
 
-Second, visualization of the first 3 dimensions of the PCA coordinate system allows us to pack as much information as possible into a single 3-D plot. (And, as mentioned above, animating this 3-D plot then presents information from the higher dimensions as well.) **For this reason, even though PCA is typically used as a dimensionality-reduction technique, it can and typically should be used with DQM even if you do no dimensionality reduction at all.**
+Second, visualization of the first 3 dimensions of the PCA coordinate system allows us to pack as much information as possible into a single 3D plot. (And, as mentioned above, animating this 3D plot then presents information from the higher dimensions as well.) **For this reason, even though PCA is typically used as a dimensionality-reduction technique, it can and typically should be used with DQM even if you do no dimensionality reduction at all.**
 
 Of course, you can also visualize higher PCA dimensions, not just the first 3. This can be interesting, but observing DQM evolution in the first 3 PCA dimensions is usually good enough.
 
@@ -139,7 +139,7 @@ The :meth:`create_frame_0 <dqm.DQM.create_frame_0>` method creates the first 'fr
     dqm.create_frame_0()
     print(dqm.frames.shape)
 
-... will print the shape of 'frames', which will be ``<number of points x number of dimensions x 1>``. Note that 'frames' is 3-D; more frames will be added in the 3rd dimension during DQM evolution.
+... will print the shape of 'frames', which will be ``<number of points x number of dimensions x 1>``. Note that 'frames' is 3D; more frames will be added in the 3rd dimension during DQM evolution.
 
 If you're using a PCA transformation, the number of dimensions will be determined by the instance's PCA-transformation settings (see above).
 
@@ -312,7 +312,7 @@ Here, we'll give an extremely brief description of each operator:
 
 ``dqm.exph`` is the complex-valued 'evolution' operator matrix (that is, the exponentiated Hamiltonian time-evolution operator matrix). It converts a data point's current eigenbasis state vector at time :math:`t` into a new 'evolved' eigenbasis state vector at time :math:`t + step`.
 
-``dqm.xops`` is a 3-D tensor of position-expectation operators. Each slice :math:`i` in the 3rd dimension is the operator matrix that converts the eigenbasis state vector for a data point into the expected position of the data point in the :math:`ith` dimension of the data space.
+``dqm.xops`` is a 3D tensor of position-expectation operators. Each slice :math:`i` in the 3rd dimension is the operator matrix that converts the eigenbasis state vector for a data point into the expected position of the data point in the :math:`ith` dimension of the data space.
 
 If you want the full mathematical details, see the section on "Building the Quantum Operators" in the technical summary `Understanding DQM <https://github.com/zanderteller/dqm/blob/main/docs/Understanding%20DQM.pdf>`_.
 

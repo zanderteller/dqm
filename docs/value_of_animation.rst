@@ -50,8 +50,14 @@ When we show the same plot from a different angle, where we can see the 3rd dime
 |
 
 Analogy to Higher Dimensions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+----------------------------
 
-By analogy, even though our imaginations fail us in higher dimensions... When dealing with a DQM evolution in higher dimensions (more than 3), an animated plot in 3 dimensions can convey information from more than 3 dimensions about the structure of the data landscape.
+By analogy, even though our visual imaginations fail us in higher dimensions...
+
+When dealing with a DQM evolution in higher dimensions (more than 3), an animated plot in 3 dimensions can convey information from more than 3 dimensions about the structure of the data landscape.
+
+For example: if DQM is working with, say, 20 dimensions, then the motion created by the DQM evolution is occurring in all 20 dimensions. **This means, crucially, that the motion observed in an animated 3D plot is being driven by information from 20 dimensions, even though the visualization is only showing 3 dimensions.**
+
+In this sense, DQM is *not* a 3-dimensional embedding, even though the regular use of 3D plots may seem to suggest otherwise.
 
 |

@@ -23,7 +23,7 @@ Soft Dependencies
 *The core functionality of DQM does not need any of these packages, but working with DQM will be much easier with them.*
 
 * jupyterlab (for working with DQM's example Jupyter notebooks)
-* plotly (for interactive animated 3-D plotting)
+* plotly (for interactive animated 3D plotting)
 * matplotlib (for basic plotting)
 
 Cloning the DQM Repository
