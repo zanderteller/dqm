@@ -1,10 +1,10 @@
-from . import utils
-from .DQM import DQM
+from dqm import utils
+from dqm.DQM import DQM
 import numpy as np
 import unittest
 
 
-class UtilTests(unittest.TestCase):
+class TestUtil(unittest.TestCase):
 
 
     def test_pca(self):
