@@ -113,19 +113,18 @@ def load_dqm_lib(lib_path):
 # find out if we have the compiled library file
 sys_name = platform.system()
 if sys_name == 'Windows':
-    lib_ext = 'dll'
+    lib_name = 'dqm_python.dll'
 elif sys_name == 'Linux':
-    lib_ext = 'so'
+    lib_name = 'libdqm_python.so'
 elif sys_name == 'Darwin':  # Mac OS
-    lib_ext = 'dylib'
+    lib_name = 'libdqm_python.dylib'
 else:
     # we assume there will be no compiled-library file found, below, with a 'none' extension
-    lib_ext = 'none'
+    lib_name = 'none'
     print(f"## WARNING: in dqm package -- compiled-library code not implemented for platform '{sys_name}'")
 # end if/else (which system platform we're on)
 
 # we expect to find the compiled-library binary in the relative-path folder 'bin'
-lib_name = 'dqm_python.{}'.format(lib_ext)
 lib_path = os.path.join(os.path.dirname(__file__), 'bin', lib_name)
 
 # load the library, if we have it (will be imported from here by modules)
