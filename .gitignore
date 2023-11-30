@@ -12,3 +12,6 @@ dqm.egg-info/
 *.DS_Store
 *checkpoint.ipynb
 .ruff_cache/
+wheelhouse
+build/
+**/CMakeFiles

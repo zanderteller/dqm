@@ -1,10 +1,10 @@
-from . import DQM, get_clusters
+from dqm import DQM, get_clusters
 import numpy as np
 from copy import copy
 import unittest
 
 
-class DQMTests(unittest.TestCase):
+class TestDQM(unittest.TestCase):
     def test_instance_variables(self):
         dqm = DQM()
         inst_vars = list(vars(dqm).keys())

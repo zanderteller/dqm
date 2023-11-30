@@ -1,5 +1,10 @@
 [build-system]
-requires = ["setuptools"]
+requires = [
+    "setuptools",
+    "wheel",
+    "ninja",
+    "cmake>=3.12",
+]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -13,5 +18,31 @@ license = {file = "LICENSE.txt"}
 [tool.setuptools]
 packages = ["dqm"]
 
-[tool.setuptools.package-data]
-dqm = ["bin/dqm_python.*"]
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
+xfail_strict = true
+filterwarnings = ["error"]
+testpaths = ["tests"]
+
+[tool.cibuildwheel]
+test-command = "pytest {project}/tests"
+test-extras = ["test"]
+test-skip = ["*universal2:arm64"]
+skip = "*-win32 *-musllinux_x86_64 *i686*"
+build = "cp3*"
+
+[tool.cibuildwheel.linux]
+archs = ["auto", "aarch64"]
+before-build = "rm -rf {project}/build"
+
+[tool.cibuildwheel.macos]
+before-build = "rm -rf {project}/build"
+
+# Use delvewheel on windows
+[tool.cibuildwheel.windows]
+before-build = [
+    "pip install delvewheel",
+    "if exist build rmdir /s /q build",
+]
+repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
