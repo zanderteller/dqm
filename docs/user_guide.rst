@@ -20,7 +20,7 @@ Among other uses, DQM can help with understanding how many models are needed for
 
 .. note::
 
-   In code examples throughout this guide, we'll refer to an instance of the :class:`DQM <dqm.DQM>` class that we'll call 'dqm', created with the default constructor: ``dqm = DQM()``.
+   In code examples throughout this guide, we'll refer to an instance of the :class:`DQM <dqm.DQM>` class that we'll call 'dqm_obj', created with the default constructor: ``dqm_obj = DQM()``.
 
 Why Quantum Mechanics?
 ----------------------
@@ -54,14 +54,14 @@ DQM's main visualization tool is the :func:`plot_frames <dqm.utils.plot_frames>`
 
 DQM also has a 'backup' function, :func:`plot_frames_ipv <dqm.utils.plot_frames_ipv>`, which uses the `IPyVolume <https://ipyvolume.readthedocs.io>`_ package. (IPyVolume is less stable/mature than Plotly and may be buggy. However, it may handle large numbers of data points and/or frames much better than Plotly does.)
 
-If you prefer to use your own visualization tools, you can. The core functionality of DQM itself does not rely on the plotting functions above. The final result of a DQM evolution (stored in the ``dqm.frames`` instance variable) is a 3D array with shape: ``<number of points x number of dimensions x number of frames>``. From there, you can visualize (and analyze) however you wish.
+If you prefer to use your own visualization tools, you can. The core functionality of DQM itself does not rely on the plotting functions above. The final result of a DQM evolution (stored in the ``dqm_obj.frames`` instance variable) is a 3D array with shape: ``<number of points x number of dimensions x number of frames>``. From there, you can visualize (and analyze) however you wish.
 
 Basic Workflow
 --------------
 
 The starting point for DQM is always a 2D real-valued matrix, with data points (samples) in the rows and dimensions (features) in the columns.
 
-Raw data is stored in a DQM instance in ``dqm.raw_data``.
+Raw data is stored in a DQM instance in ``dqm_obj.raw_data``.
 
 Data Preprocessing
 ^^^^^^^^^^^^^^^^^^
@@ -113,43 +113,43 @@ The following code block (following the `Quick Start example <quick_start.html#r
 
 .. code-block::
 
-    dqm.verbose = True  # default True
+    dqm_obj.verbose = True  # default True
 
     # run PCA, store results in instance, and display plots with PCA info
-    dqm.run_pca()
+    dqm_obj.run_pca()
 
     # choose an explicit number of dimensions (takes precedence if not None)
-    # dqm.pca_num_dims = 18
+    # dqm_obj.pca_num_dims = 18
     # OR...
     # choose a minimum proportion of total cumulative variance for the PCA dimensions to be used
-    dqm.pca_var_threshold = 0.98
+    dqm_obj.pca_var_threshold = 0.98
 
-    dqm.pca_transform = True  # default True (if False, frame 0 will be a copy of the raw data)
-    dqm.create_frame_0()
+    dqm_obj.pca_transform = True  # default True (if False, frame 0 will be a copy of the raw data)
+    dqm_obj.create_frame_0()
 
-    print("In the DQM instance, 'frames' (which now stores frame 0) has shape:", dqm.frames.shape)
+    print("In the DQM instance, 'frames' (which now stores frame 0) has shape:", dqm_obj.frames.shape)
 
 Creating Frame 0
 ^^^^^^^^^^^^^^^^
 
-The :meth:`create_frame_0 <dqm.DQM.create_frame_0>` method creates the first 'frame' of the evolution and stores it in ``dqm.frames``. The following code:
+The :meth:`create_frame_0 <dqm.DQM.create_frame_0>` method creates the first 'frame' of the evolution and stores it in ``dqm_obj.frames``. The following code:
 
 .. code-block::
 
-    dqm.create_frame_0()
-    print(dqm.frames.shape)
+    dqm_obj.create_frame_0()
+    print(dqm_obj.frames.shape)
 
 ... will print the shape of 'frames', which will be ``<number of points x number of dimensions x 1>``. Note that 'frames' is 3D; more frames will be added in the 3rd dimension during DQM evolution.
 
 If you're using a PCA transformation, the number of dimensions will be determined by the instance's PCA-transformation settings (see above).
 
-If you're not using a PCA transformation, frame 0 will simply be a copy of the raw data (stored in ``dqm.raw_data``).
+If you're not using a PCA transformation, frame 0 will simply be a copy of the raw data (stored in ``dqm_obj.raw_data``).
 
 .. _Excluding Outliers:
 
 **Excluding Outliers**
 
-If you haven't dealt with outliers already, now is a good time to check for them, in a visualization of frame 0 (by calling ``plot_frames(dqm.frames)``).
+If you haven't dealt with outliers already, now is a good time to check for them, in a visualization of frame 0 (by calling ``plot_frames(dqm_obj.frames)``).
 
 Any extreme outliers in your data will cause the DQM map to become a relatively uninteresting illustration of just how different the outliers are from everything else. Thus, you may want to simply exclude them from the data set.
 
@@ -173,8 +173,8 @@ The following code will choose a basis of size 100:
 
 .. code-block::
 
-    dqm.basis_size = 100
-    dqm.choose_basis_by_distance()
+    dqm_obj.basis_size = 100
+    dqm_obj.choose_basis_by_distance()
 	
 Choosing the basis by distance means that the method is choosing the basis points to be as far away from each other as possible in the data space. (See :meth:`choose_basis_by_distance <dqm.DQM.choose_basis_by_distance>` for details.)
 
@@ -198,14 +198,14 @@ However, there is a practical heuristic. If any points 'jump' or 'snap' to a new
 * increasing the value of sigma (see below), or
 * treating the badly represented point as an outlier and excluding it
 
-A second heuristic is expressed in the current default values of ``dqm.overlap_min_threshold`` and ``dqm.overlap_mean_threshold`` -- see the section below `Choosing a Minimum Good Value of Sigma`_.
+A second heuristic is expressed in the current default values of ``dqm_obj.overlap_min_threshold`` and ``dqm_obj.overlap_mean_threshold`` -- see the section below `Choosing a Minimum Good Value of Sigma`_.
 
 Choosing DQM Parameters
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 **Sigma**
 
-Sigma (:math:`\sigma`), introduced and explained here, is DQM's main tunable parameter (stored in ``dqm.sigma``).
+Sigma (:math:`\sigma`), introduced and explained here, is DQM's main tunable parameter (stored in ``dqm_obj.sigma``).
 
 When DQM builds a data-density map, the first step is to place a multidimensional Gaussian distribution around each data point. Sigma is the width of each Gaussian. There is only a single value for sigma; whatever value is chosen, every Gaussian around every data point has that same width (in every dimension).
 
@@ -230,18 +230,18 @@ As shown in the code block below, the :meth:`choose_sigma_for_basis <dqm.DQM.cho
 
 .. code-block::
 
-    dqm.overlap_min_threshold = 0.5  # default 0.5
-    dqm.overlap_mean_threshold = 0.9  # default 0.9
+    dqm_obj.overlap_min_threshold = 0.5  # default 0.5
+    dqm_obj.overlap_mean_threshold = 0.9  # default 0.9
 
-    dqm.choose_sigma_for_basis()
+    dqm_obj.choose_sigma_for_basis()
 
-    print('The DQM instance now has a stored value of sigma:', dqm.sigma)
+    print('The DQM instance now has a stored value of sigma:', dqm_obj.sigma)
 
 Note that this method won't work if you're using a 'full' basis (i.e., all data points are in the basis) -- there need to be some non-basis points to work with.
 
 **Mass**
 
-The DQM mass parameter (stored in ``dqm.mass``) controls the 'transparency' of the DQM landscape for a data point during evolution:
+The DQM mass parameter (stored in ``dqm_obj.mass``) controls the 'transparency' of the DQM landscape for a data point during evolution:
 
 * For a very large mass, a point will get stuck in every local minimum.
 * For a very small mass, a point will pass through every barrier and shoot straight toward the global miminum.
@@ -260,7 +260,7 @@ The value of mass can be adjusted manually, but it's best to leave this as an 'a
 
 **Step**
 
-The DQM 'step' parameter (stored in ``dqm.step``) sets the time step between frames of the evolution. It has a default value of 0.1. (The 'units' of time here are arbitrary and unimportant.)
+The DQM 'step' parameter (stored in ``dqm_obj.step``) sets the time step between frames of the evolution. It has a default value of 0.1. (The 'units' of time here are arbitrary and unimportant.)
 
 This parameter essentially never needs to be changed.
 
@@ -282,7 +282,7 @@ This step itself is extremely simple, using the :meth:`build_operators <dqm.DQM.
 
 .. code-block::
 
-    dqm.build_operators()
+    dqm_obj.build_operators()
 
 That's it. The operators are now stored in the instance, and you'll never need to work with them directly. (*Note: this step can be slow for large data sets, especially when using a large basis.*)
 
@@ -308,11 +308,11 @@ You can use the :meth:`clear_frames <dqm.DQM.clear_frames>` method to clear fram
 
 Here, we'll give an extremely brief description of each operator:
 
-``dqm.simt`` is the transpose of the 'similarity' matrix, which is used to convert each data point's current state vector from the 'raw' basis (of basis points) to the eigenbasis (of quantum eigenstates).
+``dqm_obj.simt`` is the transpose of the 'similarity' matrix, which is used to convert each data point's current state vector from the 'raw' basis (of basis points) to the eigenbasis (of quantum eigenstates).
 
-``dqm.exph`` is the complex-valued 'evolution' operator matrix (that is, the exponentiated Hamiltonian time-evolution operator matrix). It converts a data point's current eigenbasis state vector at time :math:`t` into a new 'evolved' eigenbasis state vector at time :math:`t + step`.
+``dqm_obj.exph`` is the complex-valued 'evolution' operator matrix (that is, the exponentiated Hamiltonian time-evolution operator matrix). It converts a data point's current eigenbasis state vector at time :math:`t` into a new 'evolved' eigenbasis state vector at time :math:`t + step`.
 
-``dqm.xops`` is a 3D tensor of position-expectation operators. Each slice :math:`i` in the 3rd dimension is the operator matrix that converts the eigenbasis state vector for a data point into the expected position of the data point in the :math:`ith` dimension of the data space.
+``dqm_obj.xops`` is a 3D tensor of position-expectation operators. Each slice :math:`i` in the 3rd dimension is the operator matrix that converts the eigenbasis state vector for a data point into the expected position of the data point in the :math:`ith` dimension of the data space.
 
 If you want the full mathematical details, see the section on "Building the Quantum Operators" in the technical summary `Understanding DQM <https://github.com/zanderteller/dqm/blob/main/docs/Understanding%20DQM.pdf>`_.
 
@@ -326,16 +326,16 @@ The :meth:`build_frames <dqm.DQM.build_frames>` method will build a specified nu
 .. code-block::
 
     # build and add 50 new frames to the 'frames' instance variable
-    dqm.build_frames(50)  # default 100
+    dqm_obj.build_frames(50)  # default 100
 
 The :meth:`build_frames_auto <dqm.DQM.build_frames_auto>` method will call :meth:`build_frames <dqm.DQM.build_frames>` repeatedly (in batches of 100 by default) until all points have stopped moving:
 
 .. code-block::
 
     # build and add new frames, in batches of 50, until all points stop moving
-    dqm.build_frames_auto(50)  # default batch size 100
+    dqm_obj.build_frames_auto(50)  # default batch size 100
 
-:meth:`build_frames_auto <dqm.DQM.build_frames_auto>` uses the ``dqm.stopping_threshold`` parameter to decide when a point has stopped moving. A point is considered to have stopped if it moves less then ``stopping_threshold`` distance from one frame to the next. ``stopping_threshold`` is set automatically to ``dqm.mean_row_distance / 1e6`` but can be adjusted manually.
+:meth:`build_frames_auto <dqm.DQM.build_frames_auto>` uses the ``dqm_obj.stopping_threshold`` parameter to decide when a point has stopped moving. A point is considered to have stopped if it moves less then ``stopping_threshold`` distance from one frame to the next. ``stopping_threshold`` is set automatically to ``dqm_obj.mean_row_distance / 1e6`` but can be adjusted manually.
 
 For large data sets and large basis sizes, building frames can be quite slow. In these cases, it's a very good idea to build a small number of frames first, to begin to understand what the landscape looks like, before committing to building hundreds or even thousands of frames.
 
@@ -359,8 +359,8 @@ Calling the method can be this simple:
 
 .. code-block::
 
-    dqm = DQM()
-    dqm.run_simple(dat_raw, sigma)
+    dqm_obj = DQM()
+    dqm_obj.run_simple(dat_raw, sigma)
 
 Be aware of DQM's default behaviors (unless you change settings in the instance before you call the method):
 
@@ -489,7 +489,7 @@ Feature selection -- the process of identifying which features (i.e., dimensions
 
 **General Feature Selection**
 
-Particularly when using a PCA transformation, you can look at the weights in the first few PCA dimensions. (PCA dimension weights are stored in the columns of the ``dqm.pca_eigvecs`` matrix.) Is there a small number of 'raw' dimensions with much larger PCA weights than all other 'raw' dimensions? If so, those raw dimensions are presumably disproportionately responsible for whatever structure you're seeing in DQM.
+Particularly when using a PCA transformation, you can look at the weights in the first few PCA dimensions. (PCA dimension weights are stored in the columns of the ``dqm_obj.pca_eigvecs`` matrix.) Is there a small number of 'raw' dimensions with much larger PCA weights than all other 'raw' dimensions? If so, those raw dimensions are presumably disproportionately responsible for whatever structure you're seeing in DQM.
 
 You can test that theory: for the given subset of features, if you build a DQM map with just those features, do you see essentially the same structure that you saw in the 'full' map using all features? If so, this is a decent indication that your subset of features contains all of the important information leading to the structure that you're seeing.
 
@@ -532,7 +532,7 @@ The process of running new points should be as follows:
 
 The outputs of :meth:`run_new_points <dqm.DQM.run_new_points>` are:
 
-* a set of frames for the new points (evolved to as many frames as currently exist in ``dqm.frames``)
+* a set of frames for the new points (evolved to as many frames as currently exist in ``dqm_obj.frames``)
 * a vector of in-sample basis overlaps (for all original non-basis points)
 * a vector of out-of-sample basis overlaps (for all new points)
 * a vector of in-sample proportional norms (see below)
@@ -612,7 +612,7 @@ Different parts of the DQM workflow have different computational complexities, b
 
 There are two big considerations for memory usage (in memory and on disk):
 
-The position operators (stored in ``dqm.xops``) are ``<basis size x basis size x number of DQM data dimensions>``. For a basis size of 1,000 and 100 DQM data dimensions, that comes out to 0.8 GB.
+The position operators (stored in ``dqm_obj.xops``) are ``<basis size x basis size x number of DQM data dimensions>``. For a basis size of 1,000 and 100 DQM data dimensions, that comes out to 0.8 GB.
 
 The frames are the big one -- they're ``<number of points x number of DQM data dimensions x number of frames>``. For, say, 10,000 points, 100 DQM data dimensions, and 1,000 frames, that comes out to 8 GB. (If you're dealing with millions of data points - well, you do the math...)
 

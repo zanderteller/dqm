@@ -143,11 +143,11 @@ Create a DQM instance and store the raw data.
 
 .. code-block::
 
-    dqm = DQM()
-    dqm.verbose = True  # default True
-    dqm.raw_data = dat
+    dqm_obj = DQM()
+    dqm_obj.verbose = True  # default True
+    dqm_obj.raw_data = dat
 
-    print('Raw data stored in DQM instance has shape:', dqm.raw_data.shape)
+    print('Raw data stored in DQM instance has shape:', dqm_obj.raw_data.shape)
 
 Using PCA
 ---------
@@ -174,7 +174,7 @@ Understanding the plots (left to right):
 
 .. code-block::
 
-    dqm.run_pca()
+    dqm_obj.run_pca()
 
 .. image:: images/quick_start_run_pca_plots.png
    :align: center
@@ -196,10 +196,10 @@ Here (below), we use ``pca_var_threshold``. The instance reports that the thresh
 .. code-block::
 
     # choose an explicit number of dimensions (takes precedence if not None)
-    # dqm.pca_num_dims = 18
+    # dqm_obj.pca_num_dims = 18
     # OR...
     # choose a minimum proportion of total cumulative variance for the PCA dimensions to be used
-    dqm.pca_var_threshold = 0.98
+    dqm_obj.pca_var_threshold = 0.98
 
 Create Frame 0
 ^^^^^^^^^^^^^^
@@ -215,10 +215,10 @@ Creating frame 0 means:
 
 .. code-block::
 
-    dqm.pca_transform = True  # default True (if False, frame 0 will be a copy of the raw data)
-    dqm.create_frame_0()
+    dqm_obj.pca_transform = True  # default True (if False, frame 0 will be a copy of the raw data)
+    dqm_obj.create_frame_0()
 
-    print("In the DQM instance, 'frames' (which now stores frame 0) has shape:", dqm.frames.shape)
+    print("In the DQM instance, 'frames' (which now stores frame 0) has shape:", dqm_obj.frames.shape)
 
 Plot Frame 0
 ^^^^^^^^^^^^
@@ -227,7 +227,7 @@ In this plot the first 3 dimensions are now PCA dimensions, not raw dimensions, 
 
 .. code-block::
 
-    plot_frames(dqm.frames, color=cluster_colors, title='Example Data Set: First 3 PCA Dimensions')
+    plot_frames(dqm_obj.frames, color=cluster_colors, title='Example Data Set: First 3 PCA Dimensions')
 
 .. image:: images/quick_start_first_3_pca_dims.png
    :align: center
@@ -261,8 +261,8 @@ The :meth:`choose_basis_by_distance <dqm.DQM.choose_basis_by_distance>` method b
     print(f'Using a basis size of {basis_size}')
     print()
 
-    dqm.basis_size = basis_size
-    dqm.choose_basis_by_distance()
+    dqm_obj.basis_size = basis_size
+    dqm_obj.choose_basis_by_distance()
 
 Plot Frame 0 Again
 ^^^^^^^^^^^^^^^^^^
@@ -272,12 +272,12 @@ Plot frame 0 again, this time highlighting the basis rows in orange.
 .. code-block::
 
     basis_colors = 0.8 * np.ones((num_rows, 3))  # light gray
-    basis_colors[dqm.basis_row_nums, :] = np.array([1, 0.6, 0])  # basis rows in orange
+    basis_colors[dqm_obj.basis_row_nums, :] = np.array([1, 0.6, 0])  # basis rows in orange
 
     basis_sizes = 7 * np.ones(num_rows)
-    basis_sizes[dqm.basis_row_nums] = 10  # make basis-row points bigger
+    basis_sizes[dqm_obj.basis_row_nums] = 10  # make basis-row points bigger
 
-    plot_frames(dqm.frames, color=basis_colors, size=basis_sizes, title='Example Data Set: First 3 PCA Dimensions, Highlighting Basis Rows')
+    plot_frames(dqm_obj.frames, color=basis_colors, size=basis_sizes, title='Example Data Set: First 3 PCA Dimensions, Highlighting Basis Rows')
 
 .. image:: images/quick_start_first_3_pca_dims_basis_rows.png
    :align: center
@@ -323,13 +323,13 @@ The :meth:`choose_sigma_for_basis <dqm.DQM.choose_sigma_for_basis>` method below
 
 .. code-block::
 
-    dqm.overlap_min_threshold = 0.5  # default 0.5
-    dqm.overlap_mean_threshold = 0.9  # default 0.9
+    dqm_obj.overlap_min_threshold = 0.5  # default 0.5
+    dqm_obj.overlap_mean_threshold = 0.9  # default 0.9
 
-    dqm.choose_sigma_for_basis()
+    dqm_obj.choose_sigma_for_basis()
 
     print()
-    print('The DQM instance now has a stored value of sigma:', dqm.sigma)
+    print('The DQM instance now has a stored value of sigma:', dqm_obj.sigma)
 
 Look at Overlap Distribution
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -339,10 +339,10 @@ Look at distribution of basis overlaps for non-basis rows, using the :meth:`buil
 .. code-block::
 
     # by default, the 'build_overlaps' method builds overlaps for all non-basis points in the raw data
-    overlaps = dqm.build_overlaps()
+    overlaps = dqm_obj.build_overlaps()
 
     print('for sigma {:.4f}, non-basis overlaps have min {:.3f}, mean {:.3f}, median {:.3f}, max {:.3f}'.\
-            format(dqm.sigma, np.min(overlaps), np.mean(overlaps), np.median(overlaps), np.max(overlaps)))
+            format(dqm_obj.sigma, np.min(overlaps), np.mean(overlaps), np.median(overlaps), np.max(overlaps)))
     print()
 
     plt.hist(overlaps, bins=50)
@@ -371,12 +371,12 @@ See the :ref:`User Guide <Building Operators>` and the technical summary `Unders
 
 .. code-block::
 
-    dqm.build_operators()
+    dqm_obj.build_operators()
 
     print()
-    print("The transpose of the 'similarity' matrix (for converstion of state vectors from raw basis to eigenbasis) has shape:", dqm.simt.shape)
-    print("The position-expectation operator tensor has shape:", dqm.xops.shape)
-    print("The evolution operator has shape:", dqm.exph.shape)
+    print("The transpose of the 'similarity' matrix (for converstion of state vectors from raw basis to eigenbasis) has shape:", dqm_obj.simt.shape)
+    print("The position-expectation operator tensor has shape:", dqm_obj.xops.shape)
+    print("The evolution operator has shape:", dqm_obj.exph.shape)
 
 Build Frames
 ------------
@@ -394,13 +394,13 @@ Our next step (below) will be to increase sigma a bit, to get 'clean' formation 
 
 .. code-block::
 
-    dqm.build_frames(50)  # default 100
+    dqm_obj.build_frames(50)  # default 100
 
     print()
-    print('dqm.frames has shape:', dqm.frames.shape)
+    print('dqm_obj.frames has shape:', dqm_obj.frames.shape)
     print()
 
-    plot_frames(dqm.frames, color=cluster_colors, title='Example Data Set: Sigma=2.5')
+    plot_frames(dqm_obj.frames, color=cluster_colors, title='Example Data Set: Sigma=2.5')
 
 .. image:: images/quick_start_sigma2p5.gif
    :align: center
@@ -423,17 +423,17 @@ Here's what we need to do:
 
 .. code-block::
 
-    dqm.verbose = False  # make output a little cleaner
+    dqm_obj.verbose = False  # make output a little cleaner
 
-    dqm.clear_frames()  # this keeps frame 0 by default
+    dqm_obj.clear_frames()  # this keeps frame 0 by default
 
-    dqm.sigma = 2.9
-    dqm.build_operators()
-    dqm.build_frames_auto()  # default batch size 100
+    dqm_obj.sigma = 2.9
+    dqm_obj.build_operators()
+    dqm_obj.build_frames_auto()  # default batch size 100
 
-    print("shape of 'frames' in the DQM instance is now:", dqm.frames.shape)
+    print("shape of 'frames' in the DQM instance is now:", dqm_obj.frames.shape)
 
-    plot_frames(dqm.frames, color=cluster_colors, title='Example Data Set: Sigma=2.9')
+    plot_frames(dqm_obj.frames, color=cluster_colors, title='Example Data Set: Sigma=2.9')
 
 .. image:: images/quick_start_sigma2p9.gif
    :align: center
@@ -456,20 +456,20 @@ These observations are just a first taste of how the DQM evolution (not just the
 
 .. code-block::
 
-    dqm.verbose = False  # make output a little cleaner
+    dqm_obj.verbose = False  # make output a little cleaner
 
-    dqm.clear_frames()
+    dqm_obj.clear_frames()
 
-    dqm.sigma = 3.9
-    dqm.build_operators()
-    dqm.build_frames_auto()
+    dqm_obj.sigma = 3.9
+    dqm_obj.build_operators()
+    dqm_obj.build_frames_auto()
 
-    print("shape of 'frames' in the DQM instance is now:", dqm.frames.shape)
+    print("shape of 'frames' in the DQM instance is now:", dqm_obj.frames.shape)
     print()
 
     # Note: the 'skip_frames=3' argument means only every 3rd frame is plotted. When dealing
     # with a large number of frames, this can keep the plotting routine from getting too slow.
-    plot_frames(dqm.frames, color=cluster_colors, skip_frames=3, title='Example Data Set: Sigma=3.9')
+    plot_frames(dqm_obj.frames, color=cluster_colors, skip_frames=3, title='Example Data Set: Sigma=3.9')
 
 .. image:: images/quick_start_sigma3p9.gif
    :align: center
@@ -483,12 +483,12 @@ In the plot above, the evolution is really over by frame 400. (Things are still 
 
 This is not a horrible state of affairs, but DQM does provide 2 fixes for this problem:
 
-#. You can increase the value of the ``dqm.stopping_threshold`` instance variable before building frames. (A point is considered to have stopped if it moves less then ``stopping_threshold`` distance from one frame to the next.) It's usually set automatically (to ``mean_row_distance / 1e6``). Increasing it will cause points to stop sooner.
+#. You can increase the value of the ``dqm_obj.stopping_threshold`` instance variable before building frames. (A point is considered to have stopped if it moves less then ``stopping_threshold`` distance from one frame to the next.) It's usually set automatically (to ``mean_row_distance / 1e6``). Increasing it will cause points to stop sooner.
 #. The :func:`smooth_frames <dqm.utils.smooth_frames>` function below creates a new set of frames, interpolated from the input frames, designed to target a constant average speed of moving points throughout the evolution.
 
 .. code-block::
 
-    plot_frames(smooth_frames(dqm.frames), color=cluster_colors, title='Example Data Set: Sigma=3.9, Smoothed Frames')
+    plot_frames(smooth_frames(dqm_obj.frames), color=cluster_colors, title='Example Data Set: Sigma=3.9, Smoothed Frames')
 
 .. image:: images/quick_start_sigma3p9_smoothed.gif
    :align: center
@@ -513,13 +513,13 @@ Note: for extracting the 4 individual clusters from frame 30, the value for the 
 .. code-block::
 
     # use frame 30 to extract the 4 individual clusters
-    cluster_row_nums, cluster_sizes = get_clusters(dqm.frames[:, :, 30], dqm.mean_row_distance / 8)
+    cluster_row_nums, cluster_sizes = get_clusters(dqm_obj.frames[:, :, 30], dqm_obj.mean_row_distance / 8)
     print('Found these cluster sizes:', cluster_sizes)
 
     print()
 
     # use last frame to extract the 2 superclusters
-    supercluster_row_nums, supercluster_sizes = get_clusters(dqm.frames[:, :, -1], dqm.mean_row_distance / 1000)
+    supercluster_row_nums, supercluster_sizes = get_clusters(dqm_obj.frames[:, :, -1], dqm_obj.mean_row_distance / 1000)
     print('Found these supercluster sizes:', supercluster_sizes)
 
 Using run_simple
@@ -555,14 +555,14 @@ Be aware of the default behavior of :meth:`run_simple <dqm.DQM.run_simple>` (unl
     sc1_cluster_colors = cluster_colors[row_nums, :]
 
     # build a new DQM map, just for supercluster 1, setting sigma to separate the individual clusters
-    sc1_dqm = DQM()
-    sc1_dqm.verbose = False
-    sc1_dqm.run_simple(sc1_dat, sigma=2)
+    sc1_dqm_obj = DQM()
+    sc1_dqm_obj.verbose = False
+    sc1_dqm_obj.run_simple(sc1_dat, sigma=2)
 
-    print('sc1_dqm.frames has shape:', sc1_dqm.frames.shape)
+    print('sc1_dqm_obj.frames has shape:', sc1_dqm_obj.frames.shape)
     print()
 
-    plot_frames(sc1_dqm.frames, color=sc1_cluster_colors, title='Example Data Set: Supercluster 1, Sigma=2.0')
+    plot_frames(sc1_dqm_obj.frames, color=sc1_cluster_colors, title='Example Data Set: Supercluster 1, Sigma=2.0')
 
 .. image:: images/quick_start_sc1_sigma2p0.gif
    :align: center

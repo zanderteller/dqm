@@ -4,6 +4,13 @@ import numpy as np
 import unittest
 
 
+'''
+Use the following command to run these tests from the command line:
+
+python -m unittest dqm.UtilTests
+'''
+
+
 class UtilTests(unittest.TestCase):
 
 
@@ -221,9 +228,9 @@ class UtilTests(unittest.TestCase):
 
         sigma = 1
 
-        dqm = DQM()
-        dqm.verbose = False
-        dqm.run_simple(dat, sigma)
+        dqm_obj = DQM()
+        dqm_obj.verbose = False
+        dqm_obj.run_simple(dat, sigma)
 
         num_new_frames = 87
 
@@ -232,7 +239,7 @@ class UtilTests(unittest.TestCase):
 
         # test with positive acceleration (> 1)
         acc_mult = 2
-        new_frames = utils.smooth_frames(dqm.frames, num_new_frames, acc_mult=acc_mult, verbose=False)
+        new_frames = utils.smooth_frames(dqm_obj.frames, num_new_frames, acc_mult=acc_mult, verbose=False)
         mean_first_speed = np.mean(np.linalg.norm(new_frames[:, :, 1] - new_frames[:, :, 0], axis=1))
         mean_last_speed = np.mean(np.linalg.norm(new_frames[:, :, -1] - new_frames[:, :, -2], axis=1))
         self.assertTrue(new_frames.shape[2] == num_new_frames and
@@ -241,7 +248,7 @@ class UtilTests(unittest.TestCase):
 
         # test with negative acceleration (< 1)
         acc_mult = 0.5
-        new_frames = utils.smooth_frames(dqm.frames, num_new_frames, acc_mult=acc_mult, verbose=False)
+        new_frames = utils.smooth_frames(dqm_obj.frames, num_new_frames, acc_mult=acc_mult, verbose=False)
         mean_first_speed = np.mean(np.linalg.norm(new_frames[:, :, 1] - new_frames[:, :, 0], axis=1))
         mean_last_speed = np.mean(np.linalg.norm(new_frames[:, :, -1] - new_frames[:, :, -2], axis=1))
         self.assertTrue(new_frames.shape[2] == num_new_frames and

@@ -1,7 +1,7 @@
 API Reference
 =============
 
-The dqm package has one class, :class:`DQM <dqm.DQM>`, and several :mod:`utility functions <dqm.utils>`.
+The 'dqm' package has one class, :class:`DQM <dqm.DQM>`, and several :mod:`utility functions <dqm.utils>`.
 
 Everything can be imported directly from the package. Examples:
 

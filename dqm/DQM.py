@@ -1783,39 +1783,39 @@ class DQM:
                 f"sub dir '{sub_dir_name}' must exist and have saved dqm data"
         # end if sub_dir is not None
 
-        dqm = DQM()
+        dqm_obj = DQM()
 
         ## things that are common to all landscapes (raw data and PCA info)
         if load_raw_data:
             pth = os.path.join(main_dir, 'raw_data.npy')
             if os.path.exists(pth):
-                dqm.raw_data = np.load(pth, allow_pickle=True)
+                dqm_obj.raw_data = np.load(pth, allow_pickle=True)
         pth = os.path.join(main_dir, 'raw_col_means.npy')
         if os.path.exists(pth):
-            dqm.raw_col_means = np.load(pth, allow_pickle=True)
+            dqm_obj.raw_col_means = np.load(pth, allow_pickle=True)
         pth = os.path.join(main_dir, 'pca_eigvals.npy')
         if os.path.exists(pth):
-            dqm.pca_eigvals = np.load(pth, allow_pickle=True)
+            dqm_obj.pca_eigvals = np.load(pth, allow_pickle=True)
         pth = os.path.join(main_dir, 'pca_eigvecs.npy')
         if os.path.exists(pth):
-            dqm.pca_eigvecs = np.load(pth, allow_pickle=True)
+            dqm_obj.pca_eigvecs = np.load(pth, allow_pickle=True)
         pth = os.path.join(main_dir, 'pca_cum_var.npy')
         if os.path.exists(pth):
-            dqm.pca_cum_var = np.load(pth, allow_pickle=True)
+            dqm_obj.pca_cum_var = np.load(pth, allow_pickle=True)
         pth = os.path.join(main_dir, 'frame_0.npy')
         if os.path.exists(pth):
-            dqm.frames = np.load(pth, allow_pickle=True)
+            dqm_obj.frames = np.load(pth, allow_pickle=True)
         pth = os.path.join(main_dir, 'dqm_members')
         if os.path.exists(pth):
             with open(pth, 'rb') as pickle_file:
                 members = pickle.load(pickle_file)
-                dqm.pca_transform = members['pca_transform']
-                dqm.pca_num_dims = members['pca_num_dims']
-                dqm.pca_var_threshold = members['pca_var_threshold']
-                dqm.verbose = members['verbose']
-                dqm.min_report_time = members['min_report_time']
-                dqm.call_c =  members['call_c']
-                dqm.mean_row_distance = members['mean_row_distance']
+                dqm_obj.pca_transform = members['pca_transform']
+                dqm_obj.pca_num_dims = members['pca_num_dims']
+                dqm_obj.pca_var_threshold = members['pca_var_threshold']
+                dqm_obj.verbose = members['verbose']
+                dqm_obj.min_report_time = members['min_report_time']
+                dqm_obj.call_c =  members['call_c']
+                dqm_obj.mean_row_distance = members['mean_row_distance']
             # end with pickle file
         # end if members saved
 
@@ -1823,35 +1823,35 @@ class DQM:
         if sub_dir:
             pth = os.path.join(sub_dir, 'basis_rows.npy')
             if os.path.exists(pth):
-                dqm.basis_rows = np.load(pth, allow_pickle=True)
+                dqm_obj.basis_rows = np.load(pth, allow_pickle=True)
             pth = os.path.join(sub_dir, 'simt.npy')
             if os.path.exists(pth):
-                dqm.simt = np.load(pth, allow_pickle=True)
+                dqm_obj.simt = np.load(pth, allow_pickle=True)
             pth = os.path.join(sub_dir, 'xops.npy')
             if os.path.exists(pth):
-                dqm.xops = np.load(pth, allow_pickle=True)
+                dqm_obj.xops = np.load(pth, allow_pickle=True)
             pth = os.path.join(sub_dir, 'exph.npy')
             if os.path.exists(pth):
-                dqm.exph = np.load(pth, allow_pickle=True)
+                dqm_obj.exph = np.load(pth, allow_pickle=True)
             pth = os.path.join(sub_dir, 'frames.npy')
             if os.path.exists(pth):
-                dqm.frames = np.load(pth, allow_pickle=True)
+                dqm_obj.frames = np.load(pth, allow_pickle=True)
             pth = os.path.join(sub_dir, 'dqm_members')
             if os.path.exists(pth):
                 with open(pth, 'rb') as pickle_file:
                     members = pickle.load(pickle_file)
-                    dqm.basis_num_chunks = members['basis_num_chunks']
-                    dqm.basis_rand_seed = members['basis_rand_seed']
-                    dqm.basis_row_nums = members['basis_row_nums']
-                    dqm.non_basis_row_nums = members['non_basis_row_nums']
-                    dqm.basis_size = members['basis_size']
-                    dqm.basis_start_with_outlier = members['basis_start_with_outlier']
-                    dqm.sigma = members['sigma']
-                    dqm.step = members['step']
-                    dqm.mass = members['mass']
-                    dqm.overlap_mean_threshold = members['overlap_mean_threshold']
-                    dqm.overlap_min_threshold = members['overlap_min_threshold']
-                    dqm.stopping_threshold = members['stopping_threshold']
+                    dqm_obj.basis_num_chunks = members['basis_num_chunks']
+                    dqm_obj.basis_rand_seed = members['basis_rand_seed']
+                    dqm_obj.basis_row_nums = members['basis_row_nums']
+                    dqm_obj.non_basis_row_nums = members['non_basis_row_nums']
+                    dqm_obj.basis_size = members['basis_size']
+                    dqm_obj.basis_start_with_outlier = members['basis_start_with_outlier']
+                    dqm_obj.sigma = members['sigma']
+                    dqm_obj.step = members['step']
+                    dqm_obj.mass = members['mass']
+                    dqm_obj.overlap_mean_threshold = members['overlap_mean_threshold']
+                    dqm_obj.overlap_min_threshold = members['overlap_min_threshold']
+                    dqm_obj.stopping_threshold = members['stopping_threshold']
                 # end with pickle file
             # end if members saved
         # end if sub_dir is not None
@@ -1860,7 +1860,7 @@ class DQM:
         if verbose and t1 - t0 >= cls.min_report_time:
             print("loaded dqm instance in {} seconds".format(round(t1 - t0)))
 
-        return dqm
+        return dqm_obj
     # end class method load
 
 # end class DQM
