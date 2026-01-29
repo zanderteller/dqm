@@ -2,7 +2,7 @@ name: Build wheels
 
 on:
   push:
-    branches: [main, feature/pip-install]
+    branches: [main]
   pull_request:
     branches: [main]
   release:
