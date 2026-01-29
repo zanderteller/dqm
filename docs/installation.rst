@@ -12,7 +12,13 @@ Install DQM using pip:
 
 That's it! The package includes pre-compiled binaries, so no compiler is needed.
 
-**Requirements:** Python 3.9 or later. The only required dependency (numpy) is installed automatically.
+**Requirements:** Python 3.10 or later. The only required dependency (numpy) is installed automatically.
+
+**macOS users:** You also need OpenMP installed:
+
+.. code-block:: console
+
+   $ brew install libomp
 
 Optional Dependencies
 ---------------------
@@ -134,13 +140,15 @@ The compiled library failed to load. This can happen if:
 
 Try installing from source (see Development Installation above).
 
-**Import errors on macOS**
+**macOS: "Library not loaded: libomp.dylib" or similar**
 
-If you see errors about ``libomp.dylib`` not found, install OpenMP:
+DQM uses OpenMP for parallel processing. On macOS, install it via Homebrew:
 
 .. code-block:: console
 
    $ brew install libomp
+
+Note: Homebrew will show a "keg-only" warning - this is normal and does not affect DQM.
 
 **Reporting Issues**
 
