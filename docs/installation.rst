@@ -14,6 +14,8 @@ That's it! The package includes pre-compiled binaries, so no compiler is needed.
 
 **Requirements:** Python 3.10 or later. The only required dependency (numpy) is installed automatically.
 
+**Supported platforms:** Linux (x86_64), macOS (Apple Silicon). Intel Mac users should build from source (see Development Installation below).
+
 **macOS users:** You also need OpenMP installed:
 
 .. code-block:: console
