@@ -106,26 +106,7 @@ jobs:
       - name: List artifacts
         run: ls -la dist/
 
-      # Uncomment after setting up PyPI trusted publishing
-      # - name: Publish to PyPI
-      #   uses: pypa/gh-action-pypi-publish@release/v1
-      #   with:
-      #     packages-dir: dist/
-
-      - name: PyPI placeholder
-        run: |
-          echo "============================================="
-          echo "PyPI publishing is not yet configured."
-          echo ""
-          echo "To enable:"
-          echo "1. Create account at https://pypi.org"
-          echo "2. Add trusted publisher at https://pypi.org/manage/account/publishing/"
-          echo "   - Project: pydqm"
-          echo "   - Owner: zanderteller"
-          echo "   - Repo: dqm"
-          echo "   - Workflow: publish.yml"
-          echo "   - Environment: pypi"
-          echo "3. Create 'pypi' environment in GitHub repo settings"
-          echo "4. Uncomment the publish step above"
-          echo "============================================="
-          ls -la dist/
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
