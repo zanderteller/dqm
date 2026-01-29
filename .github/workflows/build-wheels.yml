@@ -17,8 +17,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-13, macos-14]
-        # macos-13 is Intel, macos-14 is Apple Silicon
+        os: [ubuntu-latest, macos-latest]
+        # macos-latest is Apple Silicon (arm64)
+        # Note: Intel Mac builds removed - macos-13 retired, macos-15-intel not yet stable
 
     steps:
       - uses: actions/checkout@v4
@@ -30,17 +31,20 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.21
         env:
-          # Build for Python 3.9-3.12
-          CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-*"
+          # Build for Python 3.10-3.12 (3.9 dropped for simpler compatibility)
+          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
           # Skip 32-bit builds and musllinux (to keep build times reasonable)
           CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux_*"
-          # Install OpenMP on Linux before building
-          CIBW_BEFORE_ALL_LINUX: yum install -y libgomp || apt-get update && apt-get install -y libgomp1
           # Test that the wheel works
           CIBW_TEST_COMMAND: python -c "import dqm; print('dqm_lib loaded:', dqm.dqm_lib is not None)"
           CIBW_TEST_REQUIRES: numpy
-          # macOS deployment target
-          MACOSX_DEPLOYMENT_TARGET: "10.13"
+          # macOS: use delocate but exclude OpenMP (users need brew install libomp)
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
+            delocate-wheel --require-archs {delocate_archs}
+            --exclude libomp.dylib
+            -w {dest_dir} -v {wheel}
+          # macOS deployment target (11.0 minimum for arm64)
+          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=11.0
 
       - uses: actions/upload-artifact@v4
         with:
@@ -69,7 +73,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@v4
