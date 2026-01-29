@@ -10,9 +10,11 @@ ifeq ($(OS),Darwin)
 # Mac OS
 CXX:=g++
 DLL=dylib
-OPENMPFLAGS:=-I/usr/local/include -Xpreprocessor -fopenmp
-OPENMPLIB:=-L/usr/local/lib -I/usr/local/include -lomp
-else 
+# Auto-detect Homebrew libomp location (works for both Intel and Apple Silicon)
+LIBOMP_PREFIX:=$(shell brew --prefix libomp 2>/dev/null || echo /usr/local)
+OPENMPFLAGS:=-I$(LIBOMP_PREFIX)/include -Xpreprocessor -fopenmp
+OPENMPLIB:=-L$(LIBOMP_PREFIX)/lib -lomp
+else
 # Linux
 DLL=so
 OPENMPFLAGS:=-Xpreprocessor -fopenmp

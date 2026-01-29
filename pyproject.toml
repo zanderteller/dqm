@@ -1,17 +1,48 @@
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["scikit-build-core>=0.5", "numpy"]
+build-backend = "scikit_build_core.build"
 
 [project]
-name = "dqm"
+name = "pydqm"
+version = "0.1.0"
 authors = [{name = "Zander Teller", email = "zander.teller@gmail.com"}]
 description = "Dynamic Quantum Mapping"
-version = "0.1.0"
-dependencies = ["numpy"]
+readme = "README.rst"
 license = {file = "LICENSE.txt"}
+requires-python = ">=3.9"
+dependencies = ["numpy"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: C++",
+    "Topic :: Scientific/Engineering",
+]
+keywords = ["dimensionality reduction", "visualization", "animation", "data science"]
 
-[tool.setuptools]
-packages = ["dqm"]
+[project.urls]
+Homepage = "https://github.com/zanderteller/dqm"
+Documentation = "https://dqm.readthedocs.io"
+Repository = "https://github.com/zanderteller/dqm"
+Issues = "https://github.com/zanderteller/dqm/issues"
+Changelog = "https://github.com/zanderteller/dqm/releases"
 
-[tool.setuptools.package-data]
-dqm = ["bin/dqm_python.*"]
+[project.optional-dependencies]
+viz = ["jupyterlab", "plotly", "matplotlib"]
+dev = ["pytest", "ruff"]
+
+[tool.scikit-build]
+cmake.source-dir = "cpp"
+cmake.build-type = "Release"
+wheel.install-dir = "."
+wheel.packages = ["dqm"]
+
+[tool.scikit-build.cmake.define]
+CMAKE_OSX_DEPLOYMENT_TARGET = "10.13"

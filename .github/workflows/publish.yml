@@ -1,0 +1,53 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:  # Allow manual trigger for testing
+
+jobs:
+  publish:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    # Only run on releases from the main repo (not forks)
+    if: github.repository == 'zanderteller/dqm'
+
+    # IMPORTANT: Configure trusted publishing in PyPI before enabling this
+    # See: https://docs.pypi.org/trusted-publishers/
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pydqm
+
+    permissions:
+      id-token: write  # Required for trusted publishing
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -la dist/
+
+      # Uncomment the following step after setting up PyPI trusted publishing
+      # - name: Publish to PyPI
+      #   uses: pypa/gh-action-pypi-publish@release/v1
+      #   with:
+      #     # No password needed with trusted publishing
+      #     packages-dir: dist/
+
+      - name: Publication placeholder
+        run: |
+          echo "============================================="
+          echo "PyPI publishing is not yet configured."
+          echo ""
+          echo "To enable publishing:"
+          echo "1. Register 'pydqm' package on PyPI"
+          echo "2. Set up trusted publishing for this repo"
+          echo "3. Uncomment the publish step in this workflow"
+          echo "============================================="
+          echo ""
+          echo "Artifacts that would be published:"
+          ls -la dist/

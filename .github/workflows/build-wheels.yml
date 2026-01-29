@@ -1,0 +1,99 @@
+name: Build wheels
+
+on:
+  push:
+    branches: [main, feature/pip-install]
+  pull_request:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-13, macos-14]
+        # macos-13 is Intel, macos-14 is Apple Silicon
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OpenMP (macOS)
+        if: runner.os == 'macOS'
+        run: brew install libomp
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.21
+        env:
+          # Build for Python 3.9-3.12
+          CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-*"
+          # Skip 32-bit builds and musllinux (to keep build times reasonable)
+          CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux_*"
+          # Install OpenMP on Linux before building
+          CIBW_BEFORE_ALL_LINUX: yum install -y libgomp || apt-get update && apt-get install -y libgomp1
+          # Test that the wheel works
+          CIBW_TEST_COMMAND: python -c "import dqm; print('dqm_lib loaded:', dqm.dqm_lib is not None)"
+          CIBW_TEST_REQUIRES: numpy
+          # macOS deployment target
+          MACOSX_DEPLOYMENT_TARGET: "10.13"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: ./wheelhouse/*.whl
+
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build sdist
+        run: pipx run build --sdist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  test:
+    name: Test on ${{ matrix.os }} / Python ${{ matrix.python-version }}
+    needs: [build_wheels]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Download wheels
+        uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: wheelhouse
+
+      - name: Install wheel
+        run: |
+          pip install numpy
+          pip install --find-links wheelhouse dqm
+
+      - name: Run basic import test
+        run: python -c "import dqm; print('dqm_lib loaded:', dqm.dqm_lib is not None)"
+
+      - name: Run package tests
+        run: |
+          cd /tmp  # Run from different directory to ensure installed package is used
+          python -m unittest dqm.DQMTests -v
