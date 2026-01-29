@@ -19,6 +19,7 @@ jobs:
     name: Build wheels
     uses: ./.github/workflows/build-wheels.yml
 
+  # TODO: Remove this job if TestPyPI is never needed
   publish-testpypi:
     name: Publish to TestPyPI
     needs: [build]

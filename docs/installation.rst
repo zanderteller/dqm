@@ -45,7 +45,7 @@ To verify that DQM is installed correctly and the compiled library is working:
 .. code-block:: python
 
    import dqm
-   print("DQM version:", dqm.__version__ if hasattr(dqm, '__version__') else "0.1.0")
+   print("DQM version:", dqm.__version__)
    print("Compiled library loaded:", dqm.dqm_lib is not None)
 
 You should see ``Compiled library loaded: True``. If you see ``False``, the compiled library failed to load - please report this as an issue.

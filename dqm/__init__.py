@@ -2,6 +2,12 @@ import os
 import platform
 import ctypes
 import numpy as np
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("pydqm")
+except PackageNotFoundError:
+    __version__ = "unknown"  # Package not installed (running from source)
 
 
 def load_dqm_lib(lib_path):
