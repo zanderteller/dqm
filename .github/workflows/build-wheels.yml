@@ -8,6 +8,7 @@ on:
   release:
     types: [published]
   workflow_dispatch:  # Allow manual trigger
+  workflow_call:  # Allow being called by other workflows
 
 jobs:
   build_wheels:
@@ -88,7 +89,7 @@ jobs:
       - name: Install wheel
         run: |
           pip install numpy
-          pip install --find-links wheelhouse dqm
+          pip install --find-links wheelhouse pydqm
 
       - name: Run basic import test
         run: python -c "import dqm; print('dqm_lib loaded:', dqm.dqm_lib is not None)"

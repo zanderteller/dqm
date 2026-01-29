@@ -3,51 +3,129 @@ name: Publish to PyPI
 on:
   release:
     types: [published]
-  workflow_dispatch:  # Allow manual trigger for testing
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Publish target'
+        required: true
+        default: 'testpypi'
+        type: choice
+        options:
+          - testpypi
+          - pypi
 
 jobs:
-  publish:
-    name: Publish to PyPI
-    runs-on: ubuntu-latest
-    # Only run on releases from the main repo (not forks)
-    if: github.repository == 'zanderteller/dqm'
+  build:
+    name: Build wheels
+    uses: ./.github/workflows/build-wheels.yml
 
-    # IMPORTANT: Configure trusted publishing in PyPI before enabling this
-    # See: https://docs.pypi.org/trusted-publishers/
+  publish-testpypi:
+    name: Publish to TestPyPI
+    needs: [build]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi'
+
     environment:
-      name: pypi
-      url: https://pypi.org/p/pydqm
+      name: testpypi
+      url: https://test.pypi.org/p/pydqm
 
     permissions:
-      id-token: write  # Required for trusted publishing
+      id-token: write
 
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          path: dist
+          pattern: wheels-*
           merge-multiple: true
+          path: dist
+
+      - name: Download sdist
+        uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist
 
       - name: List artifacts
         run: ls -la dist/
 
-      # Uncomment the following step after setting up PyPI trusted publishing
+      # Uncomment after setting up TestPyPI trusted publishing
+      # - name: Publish to TestPyPI
+      #   uses: pypa/gh-action-pypi-publish@release/v1
+      #   with:
+      #     repository-url: https://test.pypi.org/legacy/
+      #     packages-dir: dist/
+
+      - name: TestPyPI placeholder
+        run: |
+          echo "============================================="
+          echo "TestPyPI publishing is not yet configured."
+          echo ""
+          echo "To enable:"
+          echo "1. Create account at https://test.pypi.org"
+          echo "2. Add trusted publisher at https://test.pypi.org/manage/account/publishing/"
+          echo "   - Project: pydqm"
+          echo "   - Owner: zanderteller"
+          echo "   - Repo: dqm"
+          echo "   - Workflow: publish.yml"
+          echo "   - Environment: testpypi"
+          echo "3. Create 'testpypi' environment in GitHub repo settings"
+          echo "4. Uncomment the publish step above"
+          echo "============================================="
+          ls -la dist/
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: [build]
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'release') ||
+      (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi')
+
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pydqm
+
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: dist
+
+      - name: Download sdist
+        uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist
+
+      - name: List artifacts
+        run: ls -la dist/
+
+      # Uncomment after setting up PyPI trusted publishing
       # - name: Publish to PyPI
       #   uses: pypa/gh-action-pypi-publish@release/v1
       #   with:
-      #     # No password needed with trusted publishing
       #     packages-dir: dist/
 
-      - name: Publication placeholder
+      - name: PyPI placeholder
         run: |
           echo "============================================="
           echo "PyPI publishing is not yet configured."
           echo ""
-          echo "To enable publishing:"
-          echo "1. Register 'pydqm' package on PyPI"
-          echo "2. Set up trusted publishing for this repo"
-          echo "3. Uncomment the publish step in this workflow"
+          echo "To enable:"
+          echo "1. Create account at https://pypi.org"
+          echo "2. Add trusted publisher at https://pypi.org/manage/account/publishing/"
+          echo "   - Project: pydqm"
+          echo "   - Owner: zanderteller"
+          echo "   - Repo: dqm"
+          echo "   - Workflow: publish.yml"
+          echo "   - Environment: pypi"
+          echo "3. Create 'pypi' environment in GitHub repo settings"
+          echo "4. Uncomment the publish step above"
           echo "============================================="
-          echo ""
-          echo "Artifacts that would be published:"
           ls -la dist/
