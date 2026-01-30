@@ -22,7 +22,7 @@ For visualization support (recommended):
 
 .. code-block:: console
 
-   $ pip install pydqm[viz]
+   $ pip install "pydqm[viz]"
 
 See the `Installation Guide <https://dqm.readthedocs.io/en/latest/installation.html>`_ for more details.
 

@@ -29,7 +29,7 @@ The core functionality of DQM does not require these packages, but they make wor
 
 .. code-block:: console
 
-   $ pip install pydqm[viz]
+   $ pip install "pydqm[viz]"
 
 This installs:
 
