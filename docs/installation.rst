@@ -1,117 +1,157 @@
 Installation
 ============
 
-An 'official' Python release of DQM (via pip, conda, etc.) is not yet implemented. We've tried to make manual installation as easy as possible.
+Standard Installation
+---------------------
 
-Please report any issues on the DQM GitHub `Issues <https://github.com/zanderteller/dqm/issues>`_ page. (Or start on the DQM GitHub `Discussions <https://github.com/zanderteller/dqm/discussions>`_ page if you're not sure how to report the issue, whether the issue is really specific to DQM, etc.)
-
-Python Dependencies
--------------------
-
-You'll need to install some python packages that DQM expects to find. (You can install via pip, conda, etc., as you prefer.)
-
-Hard Dependencies
-^^^^^^^^^^^^^^^^^
-
-*These packages are required: DQM won't work without them.*
-
-* numpy
-
-Soft Dependencies
-^^^^^^^^^^^^^^^^^
-
-*The core functionality of DQM does not need any of these packages, but working with DQM will be much easier with them.*
-
-* jupyterlab (for working with DQM's example Jupyter notebooks)
-* plotly (for interactive animated 3D plotting)
-* matplotlib (for basic plotting)
-
-Cloning the DQM Repository
---------------------------
-
-Go to the `DQM GitHub <https://github.com/zanderteller/dqm>`_ page and clone the repository to your machine. (Use the green 'Code' button at top right of the page.)
-
-For right now, you probably want the 'main' branch, which is the default on the GitHub page. (There is a tagged version 0.1.0, but things may change quickly at first...)
-
-Setting Your PYTHONPATH
------------------------
-
-Wherever you put your local clone on your machine, the clone's top-level main folder (containing the README file), which we'll call ``<your clone main folder>``, will ultimately need to be in your PYTHONPATH.
-
-If you use pip generally to install packages, you can copy the DQM package to your 'standard' site-package location as shown below. (**NOTE:** be sure to do this *AFTER* building the compiled C++ library file.)
+Install DQM using pip:
 
 .. code-block:: console
 
-   $ cd <your clone main folder>
-   $ pip install .
+   $ pip install pydqm
 
-Compiling the C++ Library Code
-------------------------------
+That's it! The package includes pre-compiled binaries, so no compiler is needed.
 
-Important core functions in DQM are implemented in C++, which you'll need to compile on your machine. (*DQM has Python-only implementations of all of these core functions, but the Python versions will be unusably slow for all but the smallest data sets.*)
+**Requirements:** Python 3.10 or later. The only required dependency (numpy) is installed automatically.
 
-The C++ code uses the OpenMP library for parallel processing. (*So, be aware that a large job will eat up all of your machine's processing power...*)
+**Supported platforms:** Linux (x86_64), macOS (Apple Silicon). Intel Mac users should build from source (see Development Installation below).
 
-For all the platforms below, successful compilation will automatically put a compiled library file in ``<your clone main folder>/dqm/bin``, which is where the DQM Python code expects to find it.
-
-Linux
-^^^^^
-
-Compilation from the command line should be simple. (Tested successfully on Ubuntu 22.04.)
+**macOS users:** You also need OpenMP installed:
 
 .. code-block:: console
 
-   $ cd <your clone main folder>/cpp
+   $ brew install libomp
+
+Optional Dependencies
+---------------------
+
+The core functionality of DQM does not require these packages, but they make working with DQM much easier:
+
+.. code-block:: console
+
+   $ pip install pydqm[viz]
+
+This installs:
+
+* **jupyterlab** - for working with DQM's example Jupyter notebooks
+* **plotly** - for interactive animated 3D plotting
+* **matplotlib** - for basic plotting
+
+Verifying Installation
+----------------------
+
+To verify that DQM is installed correctly and the compiled library is working:
+
+.. code-block:: python
+
+   import dqm
+   print("DQM version:", dqm.__version__)
+   print("Compiled library loaded:", dqm.dqm_lib is not None)
+
+You should see ``Compiled library loaded: True``. If you see ``False``, the compiled library failed to load - please report this as an issue.
+
+----
+
+Development Installation
+------------------------
+
+This section is for contributors or users who want to build DQM from source.
+
+Cloning the Repository
+^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: console
+
+   $ git clone https://github.com/zanderteller/dqm.git
+   $ cd dqm
+
+Building with CMake (Recommended)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+DQM uses CMake for cross-platform builds. The easiest way to build and install for development:
+
+.. code-block:: console
+
+   $ pip install -e .
+
+This will:
+
+1. Compile the C++ library using CMake
+2. Install DQM in "editable" mode (changes to Python code take effect immediately)
+
+**Prerequisites:**
+
+* A C++ compiler (g++, clang++, or MSVC)
+* CMake 3.17 or later
+* OpenMP (for parallel processing - see platform-specific notes below)
+
+Building with Make (Alternative)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The original Makefile is still available for developers who prefer it:
+
+.. code-block:: console
+
+   $ cd cpp
    $ make all
 
-To be sure everything worked, check for the compiled library in its final location: ``<your clone main folder>/dqm/bin/dqm_python.so``.
+Successful compilation puts the library in ``dqm/bin/``.
 
-Windows
-^^^^^^^
+Platform-Specific Notes
+^^^^^^^^^^^^^^^^^^^^^^^
 
-Use `Visual Studio <https://visualstudio.microsoft.com/>`_. In the Visual Studio application:
+**Linux**
 
-* Open the DQM Visual Studio solution file: ``<your clone main folder>/cpp/dqm_python.sln``.
-* Make sure the Configuration dropdown (in the main toolbar near the top of the window) is set to 'Release' (and *not* 'Debug').
-* From the 'Build' menu, run the 'Build Solution' command.
-
-To be sure everything worked, check for the compiled library in its final location: ``<your clone main folder>/dqm/bin/dqm_python.dll``.
-
-Mac
-^^^
-
-**OpenMP**
-
-Unfortunately, Apple officially parted ways with OpenMP a while back. Solutions are possible, but it may or may not be easy. And remember that the exact solution may depend on which kind of chip you have: Intel or ARM (M).
-
-The following was a successful solution on an M1 Mac:
-
-This `R-Project for Mac <https://mac.r-project.org/openmp/>`_ page has prebuilt OpenMP binaries (for both Intel and ARM). As described on that page, we downloaded the lastest version and moved the prebuilt files to the following locations:
+OpenMP is typically available by default. If not:
 
 .. code-block:: console
 
-   /usr/local/lib/libomp.dylib
-   /usr/local/include/ompt.h
-   /usr/local/include/omp.h
-   /usr/local/include/omp-tools.h
+   # Ubuntu/Debian
+   $ sudo apt-get install libgomp1
 
-Note that the DQM Makefile (``<your clone main folder>/cpp/Makefile``) expects to find the above files in those exact locations.
+   # CentOS/RHEL
+   $ sudo yum install libgomp
 
-**g++ Compiler**
+**macOS**
 
-The DQM Makefile expects to use the g++ compiler, which you may need to install (via XCode, homebrew, or other means).
-
-You're welcome to try other compilers as well (we certainly didn't test every option), by changing the line ``CXX:=g++`` in the Makefile.
-
-**Compiling**
-
-Once you've cleared those hurdles, compilation from the command line should be simple:
+Apple does not ship OpenMP by default. Install it via Homebrew:
 
 .. code-block:: console
 
-   $ cd <your clone main folder>/cpp
-   $ make all
+   $ brew install libomp
 
-To be sure everything worked, check for the compiled library in its final location: ``<your clone main folder>/dqm/bin/dqm_python.dylib``.
+The build system automatically detects Homebrew's libomp location on both Intel and Apple Silicon Macs.
 
-|
+**Windows**
+
+Use Visual Studio. Open the solution file ``cpp/dqm_python.sln``, set configuration to "Release", and build.
+
+Alternatively, CMake with MSVC should work (not extensively tested).
+
+----
+
+Troubleshooting
+---------------
+
+**"Compiled library loaded: False"**
+
+The compiled library failed to load. This can happen if:
+
+* The wheel doesn't include a binary for your platform
+* There's a missing system library (like OpenMP)
+
+Try installing from source (see Development Installation above).
+
+**macOS: "Library not loaded: libomp.dylib" or similar**
+
+DQM uses OpenMP for parallel processing. On macOS, install it via Homebrew:
+
+.. code-block:: console
+
+   $ brew install libomp
+
+Note: Homebrew will show a "keg-only" warning - this is normal and does not affect DQM.
+
+**Reporting Issues**
+
+Please report installation issues on the DQM GitHub `Issues <https://github.com/zanderteller/dqm/issues>`_ page, or start a discussion on the `Discussions <https://github.com/zanderteller/dqm/discussions>`_ page.

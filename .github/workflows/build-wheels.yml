@@ -1,0 +1,108 @@
+name: Build wheels
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:  # Allow manual trigger
+  workflow_call:  # Allow being called by other workflows
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        # macos-latest is Apple Silicon (arm64)
+        # Note: Intel Mac builds removed - macos-13 retired, macos-15-intel not yet stable
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OpenMP (macOS)
+        if: runner.os == 'macOS'
+        run: brew install libomp
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.21
+        env:
+          # Build for Python 3.10-3.13
+          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
+          # Skip 32-bit builds and musllinux (to keep build times reasonable)
+          CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux_*"
+          # Test that the wheel works
+          CIBW_TEST_COMMAND: python -c "import dqm; print('dqm_lib loaded:', dqm.dqm_lib is not None)"
+          CIBW_TEST_REQUIRES: numpy
+          # macOS: use delocate but exclude OpenMP (users need brew install libomp)
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
+            delocate-wheel --require-archs {delocate_archs}
+            --exclude libomp.dylib
+            -w {dest_dir} -v {wheel}
+          # macOS deployment target (11.0 minimum for arm64)
+          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=11.0
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: ./wheelhouse/*.whl
+
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build sdist
+        run: pipx run build --sdist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  test:
+    name: Test on ${{ matrix.os }} / Python ${{ matrix.python-version }}
+    needs: [build_wheels]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install OpenMP (macOS)
+        if: runner.os == 'macOS'
+        run: brew install libomp
+
+      - name: Download wheels
+        uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: wheelhouse
+
+      - name: Install wheel
+        run: |
+          pip install numpy
+          pip install --find-links wheelhouse pydqm
+
+      - name: Run basic import test
+        run: python -c "import dqm; print('dqm_lib loaded:', dqm.dqm_lib is not None)"
+
+      - name: Run package tests
+        run: |
+          cd /tmp  # Run from different directory to ensure installed package is used
+          python -m unittest dqm.DQMTests -v
