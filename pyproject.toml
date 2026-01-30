@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "pydqm"
-version = "0.1.2"
+version = "0.1.3"
 authors = [{name = "Zander Teller", email = "zander.teller@gmail.com"}]
 description = "Dynamic Quantum Mapping"
 readme = "README.rst"
